@@ -5,7 +5,8 @@
   "description": "A fast and simple URL shortener monorepo",
   "workspaces": [
     "server",
-    "client"
+    "client",
+    "api-docs"
   ],
   "scripts": {
     "dev:server": "bun --filter server dev",
