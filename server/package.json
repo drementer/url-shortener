@@ -1,0 +1,31 @@
+{
+  "name": "server",
+  "version": "2.1.0",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch index.ts",
+    "build": "rolldown -c rolldown.config.js",
+    "start": "bun dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nanoid": "^5.1.6",
+    "prisma": "5.22.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "rolldown": "^1.0.0-beta.46"
+  }
+}

@@ -1,0 +1,31 @@
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+
+# Folder config file
+[Dd]esktop.ini
+
+# Windows shortcuts
+*.lnk
+
+# MacOS general
+.DS_Store
+
+# Icon must end with two \r
+Icon
+
+# Packages
+node_modules/
+package-lock.json
+bun.lock
+
+# Dist
+dist/
+
+# Environment variables
+.env
+serviceAccountKey.json
+
+# Database
+*.db
+*.db-journal
