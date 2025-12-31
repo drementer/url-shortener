@@ -1,0 +1,395 @@
+openapi: 3.0.0
+info:
+  title: URL Shortener API
+  version: 1.0.0
+  description: A simple and efficient URL shortening service API
+  contact:
+    name: URL Shortener Team
+    url: https://github.com/drementer/url-shortener
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: Status
+    description: Health check endpoints
+  - name: URLs
+    description: URL management endpoints
+  - name: Redirect
+    description: URL redirection endpoint
+
+paths:
+  /api/status:
+    get:
+      summary: Health Check
+      description: Verify that the API server is running and healthy
+      tags: [Status]
+      responses:
+        '200':
+          description: Server is healthy and operational
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+
+  /api/url:
+    get:
+      summary: Get All URLs
+      description: Retrieve a list of all shortened URLs in the system
+      tags: [URLs]
+      responses:
+        '200':
+          description: Successfully retrieved all URLs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Url'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Failed to get URLs
+
+    post:
+      summary: Create Short URL
+      description: Create a new shortened URL from an original URL
+      tags: [URLs]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUrlRequest'
+      responses:
+        '201':
+          description: URL shortened successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateUrlResponse'
+        '400':
+          description: Invalid request - missing or invalid URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingUrl:
+                  summary: URL is required
+                  value:
+                    error: URL is required
+                invalidUrl:
+                  summary: Invalid URL format
+                  value:
+                    error: Invalid URL format
+
+  /api/url/{code}:
+    get:
+      summary: Get URL Statistics
+      description: Retrieve statistics and click events for a specific shortened URL
+      tags: [URLs]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+          description: The short code of the URL
+          example: abc123
+      responses:
+        '200':
+          description: URL statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlStats'
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: URL not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Failed to get stats
+
+    delete:
+      summary: Delete URL
+      description: Delete a shortened URL by its short code
+      tags: [URLs]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+          description: The short code of the URL to delete
+          example: abc123
+      responses:
+        '200':
+          description: URL deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: URL deleted successfully
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: URL not found
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Failed to delete URL
+
+  /{code}:
+    get:
+      summary: Redirect to Original URL
+      description: Redirect from short URL to the original URL. Records click statistics.
+      tags: [Redirect]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema:
+            type: string
+          description: The short code of the URL
+          example: abc123
+      responses:
+        '301':
+          description: Redirect to original URL
+          headers:
+            Location:
+              schema:
+                type: string
+              description: The original URL to redirect to
+              example: https://example.com/very/long/url
+        '404':
+          description: URL not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: URL not found or expired
+
+components:
+  schemas:
+    Url:
+      type: object
+      required: [id, shortCode, originalUrl, clicks, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique URL identifier (CUID)
+          example: clxyz123abc456def
+        shortCode:
+          type: string
+          description: Generated short code for the URL
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://example.com/very/long/url/path
+        customSlug:
+          type: string
+          nullable: true
+          description: Custom slug for the URL (optional)
+          example: my-custom-link
+        clicks:
+          type: integer
+          description: Total click count
+          example: 42
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: URL expiration timestamp (optional)
+          example: '2025-12-31T23:59:59Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: URL creation timestamp
+          example: '2025-01-01T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: '2025-01-15T14:20:00Z'
+
+    UrlStats:
+      type: object
+      required: [id, shortCode, originalUrl, clicks, createdAt, updatedAt, clickEvents]
+      properties:
+        id:
+          type: string
+          description: Unique URL identifier (CUID)
+          example: clxyz123abc456def
+        shortCode:
+          type: string
+          description: Generated short code for the URL
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://example.com/very/long/url/path
+        customSlug:
+          type: string
+          nullable: true
+          description: Custom slug for the URL (optional)
+          example: my-custom-link
+        clicks:
+          type: integer
+          description: Total click count
+          example: 42
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: URL expiration timestamp (optional)
+          example: '2025-12-31T23:59:59Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: URL creation timestamp
+          example: '2025-01-01T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: '2025-01-15T14:20:00Z'
+        clickEvents:
+          type: array
+          description: List of click events for this URL
+          items:
+            $ref: '#/components/schemas/Click'
+
+    Click:
+      type: object
+      required: [id, urlId, createdAt]
+      properties:
+        id:
+          type: string
+          description: Unique click event identifier (CUID)
+          example: clxyz789ghi012jkl
+        urlId:
+          type: string
+          description: ID of the associated URL
+          example: clxyz123abc456def
+        userAgent:
+          type: string
+          nullable: true
+          description: User agent string of the visitor
+          example: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)
+        referer:
+          type: string
+          nullable: true
+          description: Referer URL
+          example: https://google.com
+        ip:
+          type: string
+          nullable: true
+          description: IP address of the visitor
+          example: 192.168.1.100
+        createdAt:
+          type: string
+          format: date-time
+          description: Click timestamp
+          example: '2025-01-10T09:15:30Z'
+
+    CreateUrlRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: The original URL to shorten
+          example: https://example.com/very/long/url/path
+        expiresIn:
+          type: integer
+          description: Number of hours until the URL expires (optional)
+          minimum: 1
+          example: 24
+
+    CreateUrlResponse:
+      type: object
+      required: [id, shortCode, originalUrl, createdAt]
+      properties:
+        id:
+          type: string
+          description: Unique URL identifier (CUID)
+          example: clxyz123abc456def
+        shortCode:
+          type: string
+          description: Generated short code for the URL
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: The original long URL
+          example: https://example.com/very/long/url/path
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: URL expiration timestamp
+          example: '2025-01-02T10:30:00Z'
+        createdAt:
+          type: string
+          format: date-time
+          description: URL creation timestamp
+          example: '2025-01-01T10:30:00Z'
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: URL not found
+
+    HealthCheckResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+          description: Server health status
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+          example: '2025-01-01T12:00:00Z'
