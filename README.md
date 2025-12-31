@@ -1,21 +1,50 @@
 # URL Shortener
 
-A fast and simple URL shortener built with Express, Prisma, and SQLite.
+A fast and simple URL shortener monorepo built with Bun workspaces.
 
 ## Features
 
 - **URL Shortening** - Generate short codes for long URLs
-- **Custom Slugs** - Create memorable custom short links
 - **Analytics** - Track clicks with user agent, referer, and IP
 - **Link Expiry** - Set expiration time for temporary links
-- **Click Statistics** - View detailed click history and daily stats
+- **Click Statistics** - View detailed click history
 
 ## Tech Stack
+
+### Server
 
 - **Runtime**: Bun
 - **Framework**: Express 5
 - **Database**: SQLite with Prisma ORM
 - **Security**: Helmet, CORS, Rate Limiting
+
+### Client
+
+- Coming soon
+
+## Project Structure
+
+```
+url-shortener/
+├── package.json            # Root package with workspaces
+├── server/                 # Backend API
+│   ├── CHANGELOG.md        # Server changelog
+│   ├── package.json
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── migrations/
+│   ├── controllers/
+│   ├── services/
+│   ├── repositories/
+│   ├── routers/
+│   ├── utils/
+│   ├── configs/
+│   ├── lib/
+│   ├── server.ts
+│   └── index.ts
+└── client/                 # Frontend (coming soon)
+    └── CHANGELOG.md        # Client changelog
+```
 
 ## Getting Started
 
@@ -25,51 +54,97 @@ A fast and simple URL shortener built with Express, Prisma, and SQLite.
 
 ### Installation
 
+Install all dependencies from the root directory:
+
 ```bash
-cd server
 bun install
+```
+
+Or install for a specific workspace:
+
+```bash
+bun install --filter server
 ```
 
 ### Database Setup
 
 ```bash
+cd server
 bunx prisma migrate dev
 ```
 
-### Run Development Server
+### Development
+
+Run the server in development mode:
 
 ```bash
+# From root directory
+bun run dev:server
+
+# Or from server directory
+cd server
 bun dev
 ```
 
 Server will start at `http://localhost:3000`
+
+## Workspace Commands
+
+| Command | Description |
+|---------|-------------|
+| `bun install` | Install all workspace dependencies |
+| `bun run dev:server` | Run server in development mode |
+| `bun run build:server` | Build server for production |
+| `bun run start:server` | Start production server |
+| `bun run dev:client` | Run client in development mode |
+| `bun run build:client` | Build client for production |
 
 ## API Reference
 
 ### Create Short URL
 
 ```http
-POST /api/urls
+POST /api/url
 Content-Type: application/json
 
 {
   "url": "https://example.com",
-  "customSlug": "my-link",    // optional
   "expiresIn": 24             // optional, hours
 }
 ```
 
-**Response:**
+**Response (201 Created):**
 
 ```json
 {
   "id": "cmjpskm3j000012gdkaq2hbbz",
   "shortCode": "8XERSZ",
-  "customSlug": null,
   "originalUrl": "https://example.com",
   "expiresAt": null,
   "createdAt": "2025-12-28T13:55:19.904Z"
 }
+```
+
+### List All URLs
+
+```http
+GET /api/url
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": "cmjpskm3j000012gdkaq2hbbz",
+    "shortCode": "8XERSZ",
+    "originalUrl": "https://example.com",
+    "expiresAt": null,
+    "clicks": 0,
+    "createdAt": "2025-12-28T13:55:19.904Z",
+    "updatedAt": "2025-12-28T13:55:19.904Z"
+  }
+]
 ```
 
 ### Redirect to Original URL
@@ -83,7 +158,7 @@ Returns `301 Moved Permanently` redirect to the original URL.
 ### Get URL Statistics
 
 ```http
-GET /api/urls/:code/stats
+GET /api/url/:code
 ```
 
 **Response:**
@@ -91,59 +166,58 @@ GET /api/urls/:code/stats
 ```json
 {
   "id": "cmjpskrme000112gdyo5ehbh2",
-  "shortCode": "ggl",
+  "shortCode": "abc123",
   "originalUrl": "https://google.com",
-  "customSlug": "ggl",
   "clicks": 5,
   "expiresAt": "2025-12-29T13:55:27.055Z",
   "createdAt": "2025-12-28T13:55:27.062Z",
+  "updatedAt": "2025-12-28T13:55:27.062Z",
   "clickEvents": [
     {
       "id": "cmjpskvgr000312gdc21rlsqn",
+      "urlId": "cmjpskrme000112gdyo5ehbh2",
       "userAgent": "Mozilla/5.0...",
       "referer": "https://twitter.com",
       "ip": "::1",
       "createdAt": "2025-12-28T13:55:32.043Z"
     }
-  ],
-  "clicksByDate": {
-    "2025-12-28": 5
-  }
+  ]
 }
 ```
 
 ### Delete URL
 
 ```http
-DELETE /api/urls/:code
+DELETE /api/url/:code
 ```
 
-### Health Check
+**Response:**
+
+```json
+{
+  "message": "URL deleted successfully"
+}
+```
+
+### Health Check / Status
 
 ```http
-GET /health
+GET /api/status
 ```
 
-## Project Structure
+**Response:**
 
+```json
+{
+  "status": "ok",
+  "timestamp": "2025-12-28T13:55:19.904Z"
+}
 ```
-server/
-├── prisma/
-│   ├── schema.prisma       # Database models
-│   └── migrations/         # Migration files
-├── services/
-│   ├── prisma.service.ts   # Prisma client singleton
-│   └── url.service.ts      # URL CRUD & analytics
-├── router/
-│   ├── index.routes.ts     # Main router
-│   └── url.routes.ts       # URL API routes
-├── utils/
-│   └── shortcode.ts        # Short code generator
-├── config/
-│   └── cors.config.ts      # CORS configuration
-├── server.ts               # Express app setup
-└── index.ts                # Entry point
-```
+
+## Changelogs
+
+- [Server Changelog](server/CHANGELOG.md)
+- [Client Changelog](client/CHANGELOG.md)
 
 ## Environment Variables
 
@@ -158,4 +232,3 @@ NODE_ENV=development
 ## License
 
 ISC
-

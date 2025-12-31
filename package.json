@@ -1,0 +1,28 @@
+{
+  "name": "url-shortener",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A fast and simple URL shortener monorepo",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev:server": "bun --filter server dev",
+    "build:server": "bun --filter server build",
+    "start:server": "bun --filter server start",
+    "dev:client": "bun --filter client dev",
+    "build:client": "bun --filter client build",
+    "dev": "bun run dev:server",
+    "build": "bun run build:server && bun run build:client",
+    "install:all": "bun install"
+  },
+  "keywords": [
+    "url-shortener",
+    "monorepo",
+    "bun",
+    "express"
+  ],
+  "author": "",
+  "license": "ISC"
+}
