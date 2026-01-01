@@ -7,7 +7,6 @@ import router from './routers';
 import { corsOptions } from './configs/cors';
 
 const app = express();
-const server = http.createServer(app);
 
 app.set('trust proxy', 1);
 app.use(helmet());
@@ -16,5 +15,4 @@ app.use(express.json({ limit: '10kb' }));
 
 app.use(router);
 
-export default server;
-
+export default app;
