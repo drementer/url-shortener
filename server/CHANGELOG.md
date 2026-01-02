@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Renamed API endpoint from `/api/url` to `/api/urls` for RESTful compliance (plural resource naming)
+- Adjusted rate limit windows from 15min/1hr to 1min for faster reset
+- Reduced `linkCreate` limit from 30 to 10 requests per window
+- Downgraded `standardHeaders` from draft-7 to draft-6 for broader compatibility
+- Removed Turkish inline comments from rate limit middleware
 
 ## [1.0.0] - 2025-12-28
 
