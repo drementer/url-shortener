@@ -35,7 +35,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthCheckResponse'
 
-  /api/url:
+  /api/urls:
     get:
       summary: Get All URLs
       description: Retrieve a list of all shortened URLs in the system
@@ -91,7 +91,7 @@ paths:
                   value:
                     error: Invalid URL format
 
-  /api/url/{code}:
+  /api/urls/{code}:
     get:
       summary: Get URL Statistics
       description: Retrieve statistics and click events for a specific shortened URL
