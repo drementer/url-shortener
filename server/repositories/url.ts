@@ -1,22 +1,24 @@
 import prisma from '../lib/prisma';
 
-export interface CreateUrlData {
-  shortCode: string;
-  originalUrl: string;
-  expiresAt: Date | null;
-}
-
 const urlRepository = {
   async findAll() {
     return await prisma.url.findMany();
   },
 
-  async create(data: CreateUrlData) {
+  async create({
+    shortCode,
+    originalUrl,
+    expiresAt,
+  }: {
+    shortCode: string;
+    originalUrl: string;
+    expiresAt: Date | null;
+  }) {
     return await prisma.url.create({
       data: {
-        shortCode: data.shortCode,
-        originalUrl: data.originalUrl,
-        expiresAt: data.expiresAt,
+        shortCode,
+        originalUrl,
+        expiresAt,
       },
     });
   },
