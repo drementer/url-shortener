@@ -1,6 +1,6 @@
 import express from 'express';
 import urlController from '../controllers/url';
-import { rateLimits } from '../middleware/rate-limit';
+import { rateLimits } from '../middlewares/rate-limit';
 
 const router = express.Router();
 
