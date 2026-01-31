@@ -33,7 +33,6 @@ const urlService = {
     clickData: { userAgent?: string; referer?: string; ip?: string }
   ) {
     const url = await urlRepository.findByShortCode(code);
-
     if (!url) return null;
 
     await clickRepository.create({
@@ -48,9 +47,8 @@ const urlService = {
 
   async getStats(code: string) {
     const url = await urlRepository.findByShortCodeWithClicks(code);
-
     if (!url) return null;
-
+    url.clicks = url.clickEvents.length;
     return url;
   },
 
