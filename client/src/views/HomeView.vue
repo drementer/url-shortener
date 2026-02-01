@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+
 import { toast } from 'vue-sonner';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
 } from '@/components/ui/input-group';
+import { useUrls } from '@/composables/useUrls';
 
 const { createShortUrl } = useUrls();
 
@@ -38,15 +44,10 @@ const handleSubmit = async () => {
         },
       },
     });
-
-    // Reset form
-    /* customCodeInput.value = ''
-    redirectUrlInput.value = '' */
-  } catch (error: any) {
-    console.log('📌 ~ error ->', error);
-
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Please try again';
     toast.error('Failed to shorten URL', {
-      description: error?.data?.message || 'Please try again',
+      description: message,
     });
   } finally {
     isSubmitting.value = false;

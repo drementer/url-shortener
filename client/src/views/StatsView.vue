@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { RouterLink } from 'vue-router';
+import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft,
   Link,
@@ -7,19 +11,57 @@ import {
   Calendar,
   Clock,
 } from 'lucide-vue-next';
-
-const route = useRoute();
-const shortCode = computed(() => route.params.shortCode as string);
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { useUrls } from '@/composables/useUrls';
+import type { UrlStatsResponse } from '@/types/api';
 
 const { getUrlStats } = useUrls();
+const route = useRoute();
 
-const { data, error } = await useAsyncData(`stats-${shortCode.value}`, () => {
-  return getUrlStats(shortCode.value);
+const stats = ref<UrlStatsResponse | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+async function fetchStats(code: string) {
+  if (!code) return;
+  loading.value = true;
+  error.value = null;
+  try {
+    stats.value = await getUrlStats(code);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Failed to load stats';
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  const shortCode = route.params.shortCode as string;
+  fetchStats(shortCode);
 });
 
-const stats = computed(() => data.value);
+watch(
+  () => route.params.shortCode,
+  (shortCode) => {
+    if (shortCode) fetchStats(shortCode as string);
+  }
+);
 
-const formatDate = (dateString?: string) => {
+const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -29,36 +71,29 @@ const formatDate = (dateString?: string) => {
     minute: '2-digit',
   });
 };
+
+const lastClickedAt = (s: UrlStatsResponse | null) => {
+  const last = s?.clickEvents?.[s.clickEvents.length - 1];
+  return last ? formatDate(last.createdAt) : 'N/A';
+};
 </script>
 
 <template>
   <main class="min-h-dvh py-8">
     <div class="container max-w-4xl mx-auto px-4">
-      <!-- Back button -->
-      <NuxtLink
+      <RouterLink
         to="/"
         class="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
         <ArrowLeft class="w-4 h-4" />
         Back to Home
-      </NuxtLink>
+      </RouterLink>
 
-      <!-- Error state -->
-      <div v-if="error" class="space-y-4">
-        <Card>
-          <CardContent class="p-8">
-            <div class="text-center text-destructive">
-              <p class="font-medium">Failed to load statistics</p>
-              <p class="text-sm text-muted-foreground mt-1">
-                URL not found or an error occurred
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <p v-if="loading" class="text-muted-foreground">Loading stats...</p>
+      <p v-else-if="error" class="text-destructive">{{ error }}</p>
 
       <!-- Stats content -->
-      <div v-if="stats" class="space-y-6">
+      <div v-else-if="stats" class="space-y-6">
         <!-- Header -->
         <Card>
           <CardHeader>
@@ -72,9 +107,7 @@ const formatDate = (dateString?: string) => {
           </CardHeader>
           <CardContent>
             <div class="flex items-center gap-2 text-sm text-muted-foreground">
-              <Badge variant="secondary">
-                {{ shortCode }}
-              </Badge>
+              <Badge variant="secondary"> {{ stats.shortCode }} </Badge>
             </div>
           </CardContent>
         </Card>
@@ -138,9 +171,7 @@ const formatDate = (dateString?: string) => {
                 <div>
                   <p class="text-sm text-muted-foreground">Last Clicked</p>
                   <p class="text-lg font-medium">
-                    {{
-                      formatDate(stats.clickEvents[stats.clicks - 1].createdAt)
-                    }}
+                    {{ lastClickedAt(stats) }}
                   </p>
                 </div>
               </div>
@@ -149,7 +180,7 @@ const formatDate = (dateString?: string) => {
         </div>
 
         <!-- Click History Table (if available) -->
-        <Card v-if="stats.clicks">
+        <Card v-if="stats.clickEvents?.length">
           <CardHeader>
             <CardTitle>Recent Clicks</CardTitle>
           </CardHeader>
@@ -159,24 +190,24 @@ const formatDate = (dateString?: string) => {
                 <TableRow>
                   <TableHead>Time</TableHead>
                   <TableHead>User Agent</TableHead>
-                  <TableHead>IP</TableHead>
                   <TableHead>Referer</TableHead>
+                  <TableHead>IP</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow
                   v-for="(click, index) in stats.clickEvents"
-                  :key="index"
+                  :key="click.id ?? index"
                 >
                   <TableCell>{{ formatDate(click.createdAt) }}</TableCell>
                   <TableCell class="max-w-[200px] truncate">
-                    {{ click.userAgent || '-' }}
+                    {{ click.userAgent ?? '-' }}
                   </TableCell>
                   <TableCell class="max-w-[200px] truncate">
-                    {{ click.referer || '-' }}
+                    {{ click.referer ?? '-' }}
                   </TableCell>
                   <TableCell class="max-w-[200px] truncate">
-                    {{ click.ip || '-' }}
+                    {{ click.ip ?? '-' }}
                   </TableCell>
                 </TableRow>
               </TableBody>
