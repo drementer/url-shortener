@@ -3,11 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "A fast and simple URL shortener monorepo",
-  "workspaces": [
-    "server",
-    "client",
-    "api-docs"
-  ],
   "keywords": [
     "url-shortener",
     "monorepo",
