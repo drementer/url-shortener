@@ -11,19 +11,25 @@ const handleRedirect = async (
 ) => {
   try {
     const code = req.params.code as string;
+    const clientUrl = process.env.CLIENT_URL;
 
-    const url = await urlService.recordClick(code, {
+    const result = await urlService.recordClick(code, {
       userAgent: req.get('user-agent'),
       referer: req.get('referer'),
       ip: req.ip,
     });
 
-    if (!url) {
-      res.redirect(301, `${process.env.CLIENT_URL}/404`);
+    if (result.status === 'not_found') {
+      res.redirect(301, `${clientUrl}/404`);
       return;
     }
 
-    res.redirect(301, url.originalUrl);
+    if (result.status === 'expired') {
+      res.redirect(301, `${clientUrl}/expired/${code}`);
+      return;
+    }
+
+    res.redirect(301, result.url.originalUrl);
   } catch (error) {
     next(error);
   }

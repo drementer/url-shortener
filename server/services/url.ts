@@ -15,8 +15,9 @@ const urlService = {
     // If customSlug is provided, check if it already exists
     if (customSlug) {
       const existingUrl = await urlRepository.findByShortCode(customSlug);
-      if (!existingUrl) return
-      throw new Error('This custom slug is already in use');
+      if (existingUrl) {
+        throw new Error('This custom slug is already in use');
+      }
     }
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
