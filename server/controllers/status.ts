@@ -1,6 +1,9 @@
+import type { Request, Response } from 'express';
+
 const statusController = {
-  async getStatus(req, res) {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  async getStatus(req: Request, res: Response) {
+    const timestamp = new Date().toISOString();
+    return res.json({ status: 'ok', timestamp });
   },
 };
 

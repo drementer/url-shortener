@@ -1,11 +1,16 @@
 import urlService from '../services/url';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Redirect handler - to be mounted at /:code in main router
  */
-const handleRedirect = async (req, res, next) => {
+const handleRedirect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const { code } = req.params;
+    const code = req.params.code as string;
 
     const url = await urlService.recordClick(code, {
       userAgent: req.get('user-agent'),

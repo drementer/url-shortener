@@ -14,13 +14,12 @@ const urlRepository = {
     originalUrl: string;
     expiresAt: Date | null;
   }) {
-    return await prisma.url.create({
-      data: {
-        shortCode,
-        originalUrl,
-        expiresAt,
-      },
-    });
+    const data = {
+      shortCode,
+      originalUrl,
+      expiresAt,
+    };
+    return await prisma.url.create({ data });
   },
 
   async findByShortCode(shortCode: string) {

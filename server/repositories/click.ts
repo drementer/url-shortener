@@ -12,14 +12,14 @@ const clickRepository = {
     referer?: string;
     ip?: string;
   }) {
-    return await prisma.click.create({
-      data: {
-        urlId,
-        userAgent,
-        referer,
-        ip,
-      },
-    });
+    const data = {
+      urlId,
+      userAgent,
+      referer,
+      ip,
+    };
+
+    return await prisma.click.create({ data });
   },
 };
 

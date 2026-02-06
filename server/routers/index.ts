@@ -6,7 +6,6 @@ import { rateLimits } from '../middlewares/rate-limit';
 
 const router = express.Router();
 
-// Health check endpoint
 router.use('/api/status', statusRoutes);
 router.use('/api/urls', urlRoutes);
 router.get('/:code', rateLimits.general, handleRedirect);

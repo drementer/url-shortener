@@ -1,16 +1,17 @@
 import urlService from '../services/url';
+import type { Request, Response } from 'express';
 
 const urlController = {
-  async findAll(req, res) {
+  async findAll(req: Request, res: Response) {
     try {
       const urls = await urlService.findAll();
-      res.json(urls);
+      return res.json(urls);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to get URLs' });
+      return res.status(500).json({ error: 'Failed to get URLs' });
     }
   },
 
-  async create(req, res) {
+  async create(req: Request, res: Response) {
     try {
       const { url, expiresIn } = req.body;
 
@@ -27,10 +28,10 @@ const urlController = {
       }
 
       let expiresAt: Date | undefined;
-      if (expiresIn && typeof expiresIn === 'number' && expiresIn > 0) {
+      /* if (expiresIn && typeof expiresIn === 'number' && expiresIn > 0) {
         expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + expiresIn);
-      }
+      } */
 
       const shortUrl = await urlService.create(url, expiresAt);
 
@@ -48,9 +49,9 @@ const urlController = {
     }
   },
 
-  async stats(req, res) {
+  async stats(req: Request, res: Response) {
     try {
-      const { code } = req.params;
+      const code = req.params.code as string;
       const stats = await urlService.getStats(code);
 
       if (!stats) {
@@ -64,9 +65,9 @@ const urlController = {
     }
   },
 
-  async remove(req, res) {
+  async remove(req: Request, res: Response) {
     try {
-      const { code } = req.params;
+      const code = req.params.code as string;
       const deleted = await urlService.delete(code);
 
       if (!deleted) {
