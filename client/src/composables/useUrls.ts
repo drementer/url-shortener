@@ -6,8 +6,11 @@ import type {
 } from '@/types/api';
 
 export function useUrls() {
-  const createShortUrl = async (url: string): Promise<CreateUrlResponse> => {
-    const response = await api.post('/api/urls', { url });
+  const createShortUrl = async (
+    url: string,
+    customSlug?: string,
+  ): Promise<CreateUrlResponse> => {
+    const response = await api.post('/api/urls', { url, customSlug });
     return response.data;
   };
 
