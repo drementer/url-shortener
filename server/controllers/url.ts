@@ -13,7 +13,7 @@ const urlController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { url, expiresIn } = req.body;
+      const { url, customSlug, expiresIn } = req.body;
 
       if (!url) {
         res.status(400).json({ error: 'URL is required' });
@@ -28,12 +28,12 @@ const urlController = {
       }
 
       let expiresAt: Date | undefined;
-      /* if (expiresIn && typeof expiresIn === 'number' && expiresIn > 0) {
+      if (expiresIn && typeof expiresIn === 'number' && expiresIn > 0) {
         expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + expiresIn);
-      } */
+      }
 
-      const shortUrl = await urlService.create(url, expiresAt);
+      const shortUrl = await urlService.create(url, customSlug, expiresAt);
 
       res.status(201).json({
         id: shortUrl.id,

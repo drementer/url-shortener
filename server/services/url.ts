@@ -9,14 +9,23 @@ const urlService = {
     return await urlRepository.findAll();
   },
 
-  async create(originalUrl: string, expiresAt: Date) {
+  async create(redirectUrl: string, customSlug: string, expiresAt: Date) {
     let lastError: unknown;
+
+    // If customSlug is provided, check if it already exists
+    if (customSlug) {
+      const existingUrl = await urlRepository.findByShortCode(customSlug);
+      if (!existingUrl) return
+      throw new Error('This custom slug is already in use');
+    }
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
+        const shortCode = customSlug || createShortCode();
+
         return await urlRepository.create({
-          shortCode: createShortCode(),
-          originalUrl,
+          shortCode,
+          originalUrl: redirectUrl,
           expiresAt: expiresAt || null,
         });
       } catch (error) {
@@ -30,7 +39,7 @@ const urlService = {
 
   async recordClick(
     code: string,
-    clickData: { userAgent?: string; referer?: string; ip?: string }
+    clickData: { userAgent?: string; referer?: string; ip?: string },
   ) {
     const url = await urlRepository.findByShortCode(code);
     if (!url) return null;

@@ -19,7 +19,7 @@ const handleRedirect = async (
     });
 
     if (!url) {
-      res.status(404).json({ error: 'URL not found or expired' });
+      res.redirect(301, `${process.env.CLIENT_URL}/404`);
       return;
     }
 
