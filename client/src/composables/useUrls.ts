@@ -6,15 +6,14 @@ import type {
 } from '@/types/api';
 
 export function useUrls() {
-  const createShortUrl = async (
-    payload: CreateUrlPayload
-  ): Promise<CreateUrlResponse> => {
-    const body: { url: string } = payload;
-    return api.post('/api/urls', body);
+  const createShortUrl = async (url: string): Promise<CreateUrlResponse> => {
+    const response = await api.post('/api/urls', { url });
+    return response.data;
   };
 
   const getUrlStats = async (code: string): Promise<UrlStatsResponse> => {
-    return api.get(`/api/urls/${encodeURIComponent(code)}`);
+    const response = await api.get(`/api/urls/${encodeURIComponent(code)}`);
+    return response.data;
   };
 
   return { createShortUrl, getUrlStats };

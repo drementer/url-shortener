@@ -29,10 +29,7 @@ const handleSubmit = async () => {
   isSubmitting.value = true;
 
   try {
-    const result = await createShortUrl({
-      url: redirectUrlInput.value,
-      customCode: customCodeInput.value || undefined,
-    });
+    const result = await createShortUrl(redirectUrlInput.value);
 
     toast.success('URL shortened!', {
       description: result.shortCode,
@@ -70,15 +67,17 @@ const handleSubmit = async () => {
             <div class="w-full">
               <label for="custom-code" class="block text-sm font-medium mb-2">
                 Custom URL
-                <span class="text-xs text-muted-foreground"> (optional) </span>
+                <span class="text-xs text-muted-foreground">
+                  (Coming soon)
+                </span>
               </label>
-              <InputGroup>
+              <InputGroup class="opacity-30">
                 <InputGroupInput
                   id="custom-code"
                   v-model="customCodeInput"
                   placeholder="magic-path"
                   class="pl-0!"
-                  :disabled="isSubmitting"
+                  disabled
                 />
                 <InputGroupAddon>
                   <InputGroupText class="text-foreground">
@@ -99,6 +98,7 @@ const handleSubmit = async () => {
                 placeholder="https://example.com/very-long-url"
                 class="w-full"
                 :disabled="isSubmitting"
+                autofocus
               />
             </div>
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import '@/assets/tailwind.css';
 import 'vue-sonner/style.css';
 
 import { Toaster } from 'vue-sonner';
