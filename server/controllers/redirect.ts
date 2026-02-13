@@ -19,17 +19,19 @@ const handleRedirect = async (
       ip: req.ip,
     });
 
-    if (result.status === 'not_found') {
+    if (!result) {
       res.redirect(301, `${clientUrl}/404`);
       return;
     }
 
-    if (result.status === 'expired') {
+    const isExpired = result.expiresAt && result.expiresAt < new Date();
+
+    if (isExpired) {
       res.redirect(301, `${clientUrl}/expired/${code}`);
       return;
     }
 
-    res.redirect(301, result.url.originalUrl);
+    res.redirect(301, result.originalUrl);
   } catch (error) {
     next(error);
   }
