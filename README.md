@@ -20,7 +20,11 @@ A fast and simple URL shortener monorepo built with Bun workspaces.
 
 ### Client
 
-- Coming soon
+- **Framework**: Vue 3 + Vite
+- **State**: Pinia
+- **Routing**: Vue Router
+- **Styling**: Tailwind CSS with reka-ui components
+- **HTTP**: Axios
 
 ## Project Structure
 
@@ -33,17 +37,25 @@ url-shortener/
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── migrations/
-│   ├── controllers/
-│   ├── services/
-│   ├── repositories/
-│   ├── routers/
+│   ├── routes/             # Route definitions and middleware wiring
+│   ├── controllers/        # Request parsing and response shaping
+│   ├── services/           # Business rules and the storage contracts they need
+│   ├── entities/           # Domain types, free of any database concern
+│   ├── repositories/       # Prisma implementations of the storage contracts
+│   ├── mappers/            # Domain to API response mapping
+│   ├── validators/         # Request validation schemas (zod)
+│   ├── middleware/         # Rate limiting, validation, error handling
+│   ├── errors/             # Domain error types
+│   ├── config/             # Environment and CORS configuration
 │   ├── utils/
-│   ├── configs/
-│   ├── lib/
+│   ├── db/                 # Prisma client instance
+│   ├── tests/
+│   ├── container.ts        # Composition root wiring services to repositories
 │   ├── server.ts
 │   └── index.ts
-└── client/                 # Frontend (coming soon)
-    └── CHANGELOG.md        # Client changelog
+└── client/                 # Frontend (Vue 3)
+    ├── CHANGELOG.md        # Client changelog
+    └── src/
 ```
 
 ## Getting Started
@@ -86,7 +98,7 @@ cd server
 bun dev
 ```
 
-Server will start at `http://localhost:3000`
+Server will start at `http://localhost:3001`
 
 ## Workspace Commands
 
@@ -99,17 +111,28 @@ Server will start at `http://localhost:3000`
 | `bun run dev:client` | Run client in development mode |
 | `bun run build:client` | Build client for production |
 
+Run the server test suite from the server directory:
+
+```bash
+cd server
+bun test
+```
+
+The suite creates a throwaway SQLite database (`prisma/test.db`) and migrates it
+from scratch on every run, so it never touches development data.
+
 ## API Reference
 
 ### Create Short URL
 
 ```http
-POST /api/url
+POST /api/urls
 Content-Type: application/json
 
 {
   "url": "https://example.com",
-  "expiresIn": 24             // optional, hours
+  "customSlug": "my-link",    // optional, 3-32 chars of [A-Za-z0-9_-]
+  "expiresIn": 24             // optional, whole hours, 1-8760
 }
 ```
 
@@ -118,17 +141,27 @@ Content-Type: application/json
 ```json
 {
   "id": "cmjpskm3j000012gdkaq2hbbz",
-  "shortCode": "8XERSZ",
+  "shortCode": "my-link",
   "originalUrl": "https://example.com",
+  "clicks": 0,
   "expiresAt": null,
   "createdAt": "2025-12-28T13:55:19.904Z"
 }
 ```
 
+Invalid input answers `400` with the failing rule, and a custom slug that is
+already taken answers `409`:
+
+```json
+{ "error": "This custom slug is already in use" }
+```
+
+Reserved slugs: `api`, `404`, `expired`, `stats`.
+
 ### List All URLs
 
 ```http
-GET /api/url
+GET /api/urls
 ```
 
 **Response:**
@@ -139,10 +172,9 @@ GET /api/url
     "id": "cmjpskm3j000012gdkaq2hbbz",
     "shortCode": "8XERSZ",
     "originalUrl": "https://example.com",
-    "expiresAt": null,
     "clicks": 0,
-    "createdAt": "2025-12-28T13:55:19.904Z",
-    "updatedAt": "2025-12-28T13:55:19.904Z"
+    "expiresAt": null,
+    "createdAt": "2025-12-28T13:55:19.904Z"
   }
 ]
 ```
@@ -153,12 +185,14 @@ GET /api/url
 GET /:code
 ```
 
-Returns `301 Moved Permanently` redirect to the original URL.
+Returns a `302 Found` redirect to the original URL. A click is
+recorded only for a live link. An unknown code redirects to `CLIENT_URL/404` and
+an expired one to `CLIENT_URL/expired/:code`.
 
 ### Get URL Statistics
 
 ```http
-GET /api/url/:code
+GET /api/urls/:code
 ```
 
 **Response:**
@@ -171,24 +205,25 @@ GET /api/url/:code
   "clicks": 5,
   "expiresAt": "2025-12-29T13:55:27.055Z",
   "createdAt": "2025-12-28T13:55:27.062Z",
-  "updatedAt": "2025-12-28T13:55:27.062Z",
   "clickEvents": [
     {
       "id": "cmjpskvgr000312gdc21rlsqn",
-      "urlId": "cmjpskrme000112gdyo5ehbh2",
       "userAgent": "Mozilla/5.0...",
       "referer": "https://twitter.com",
-      "ip": "::1",
       "createdAt": "2025-12-28T13:55:32.043Z"
     }
   ]
 }
 ```
 
+`clicks` is derived from the recorded click events, so the list and the
+statistics endpoint always agree. Visitor IP addresses are stored but never
+returned, since this endpoint requires no authentication.
+
 ### Delete URL
 
 ```http
-DELETE /api/url/:code
+DELETE /api/urls/:code
 ```
 
 **Response:**
@@ -224,10 +259,15 @@ GET /api/status
 Create a `.env` file in the server directory:
 
 ```env
-DATABASE_URL="file:./dev.db"
-PORT=3000
-NODE_ENV=development
+DATABASE_URL="file:./dev.db"   # required
+PORT=3001                      # optional, defaults to 3001
+CLIENT_URL=http://localhost:8080   # optional, defaults to http://localhost:8080
+NODE_ENV=development           # optional, defaults to development
 ```
+
+These are validated on boot in `server/config/env.ts`. A missing or malformed
+value stops the process with an explicit message instead of failing later on a
+request.
 
 ## License
 

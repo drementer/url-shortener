@@ -8,7 +8,7 @@ info:
     url: https://github.com/drementer/url-shortener
 
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3001
     description: Local development server
   - url: https://api.example.com
     description: Production server
@@ -56,7 +56,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: Failed to get URLs
+                error: Internal server error
 
     post:
       summary: Create Short URL
@@ -74,22 +74,46 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateUrlResponse'
+                $ref: '#/components/schemas/Url'
         '400':
-          description: Invalid request - missing or invalid URL
+          description: Request body failed validation
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               examples:
-                missingUrl:
-                  summary: URL is required
-                  value:
-                    error: URL is required
                 invalidUrl:
-                  summary: Invalid URL format
+                  summary: Missing or malformed URL
                   value:
-                    error: Invalid URL format
+                    error: A valid URL is required
+                shortSlug:
+                  summary: Custom slug too short
+                  value:
+                    error: Custom slug must be at least 3 characters
+                reservedSlug:
+                  summary: Custom slug is reserved
+                  value:
+                    error: This custom slug is reserved
+                invalidExpiry:
+                  summary: expiresIn is not a number
+                  value:
+                    error: expiresIn must be a number of hours
+        '409':
+          description: The requested custom slug is already taken
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: This custom slug is already in use
+        '429':
+          description: More than 10 URLs created within a minute
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: URL creation limit reached, try again later
 
   /api/urls/{code}:
     get:
@@ -126,7 +150,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: Failed to get stats
+                error: Internal server error
 
     delete:
       summary: Delete URL
@@ -160,6 +184,14 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: URL not found
+        '429':
+          description: More than 10 delete requests within a minute
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Delete limit reached, try again later
         '500':
           description: Server error
           content:
@@ -167,12 +199,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: Failed to delete URL
+                error: Internal server error
 
   /{code}:
     get:
       summary: Redirect to Original URL
-      description: Redirect from short URL to the original URL. Records click statistics.
+      description: >-
+        Redirect from short URL to the original URL. A click is recorded only
+        when the link is still live. Unknown and expired codes are redirected to
+        the client application instead of answering with an error.
       tags: [Redirect]
       parameters:
         - in: path
@@ -204,7 +239,7 @@ components:
   schemas:
     Url:
       type: object
-      required: [id, shortCode, originalUrl, clicks, createdAt, updatedAt]
+      required: [id, shortCode, originalUrl, clicks, expiresAt, createdAt]
       properties:
         id:
           type: string
@@ -219,14 +254,9 @@ components:
           format: uri
           description: The original long URL
           example: https://example.com/very/long/url/path
-        customSlug:
-          type: string
-          nullable: true
-          description: Custom slug for the URL (optional)
-          example: my-custom-link
         clicks:
           type: integer
-          description: Total click count
+          description: Total click count, derived from the recorded click events
           example: 42
         expiresAt:
           type: string
@@ -239,15 +269,10 @@ components:
           format: date-time
           description: URL creation timestamp
           example: '2025-01-01T10:30:00Z'
-        updatedAt:
-          type: string
-          format: date-time
-          description: Last update timestamp
-          example: '2025-01-15T14:20:00Z'
 
     UrlStats:
       type: object
-      required: [id, shortCode, originalUrl, clicks, createdAt, updatedAt, clickEvents]
+      required: [id, shortCode, originalUrl, clicks, expiresAt, createdAt, clickEvents]
       properties:
         id:
           type: string
@@ -262,14 +287,9 @@ components:
           format: uri
           description: The original long URL
           example: https://example.com/very/long/url/path
-        customSlug:
-          type: string
-          nullable: true
-          description: Custom slug for the URL (optional)
-          example: my-custom-link
         clicks:
           type: integer
-          description: Total click count
+          description: Total click count, derived from the recorded click events
           example: 42
         expiresAt:
           type: string
@@ -282,11 +302,6 @@ components:
           format: date-time
           description: URL creation timestamp
           example: '2025-01-01T10:30:00Z'
-        updatedAt:
-          type: string
-          format: date-time
-          description: Last update timestamp
-          example: '2025-01-15T14:20:00Z'
         clickEvents:
           type: array
           description: List of click events for this URL
@@ -295,16 +310,12 @@ components:
 
     Click:
       type: object
-      required: [id, urlId, createdAt]
+      required: [id, createdAt]
       properties:
         id:
           type: string
           description: Unique click event identifier (CUID)
           example: clxyz789ghi012jkl
-        urlId:
-          type: string
-          description: ID of the associated URL
-          example: clxyz123abc456def
         userAgent:
           type: string
           nullable: true
@@ -315,11 +326,6 @@ components:
           nullable: true
           description: Referer URL
           example: https://google.com
-        ip:
-          type: string
-          nullable: true
-          description: IP address of the visitor
-          example: 192.168.1.100
         createdAt:
           type: string
           format: date-time
@@ -335,40 +341,22 @@ components:
           format: uri
           description: The original URL to shorten
           example: https://example.com/very/long/url/path
+        customSlug:
+          type: string
+          description: >-
+            Preferred short code. Letters, numbers, hyphen and underscore only.
+            An empty string is treated as not provided. The values api, 404,
+            expired and stats are reserved.
+          minLength: 3
+          maxLength: 32
+          pattern: '^[A-Za-z0-9_-]+$'
+          example: my-custom-link
         expiresIn:
           type: integer
-          description: Number of hours until the URL expires (optional)
+          description: Number of whole hours until the URL expires (optional)
           minimum: 1
+          maximum: 8760
           example: 24
-
-    CreateUrlResponse:
-      type: object
-      required: [id, shortCode, originalUrl, createdAt]
-      properties:
-        id:
-          type: string
-          description: Unique URL identifier (CUID)
-          example: clxyz123abc456def
-        shortCode:
-          type: string
-          description: Generated short code for the URL
-          example: abc123
-        originalUrl:
-          type: string
-          format: uri
-          description: The original long URL
-          example: https://example.com/very/long/url/path
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: URL expiration timestamp
-          example: '2025-01-02T10:30:00Z'
-        createdAt:
-          type: string
-          format: date-time
-          description: URL creation timestamp
-          example: '2025-01-01T10:30:00Z'
 
     ErrorResponse:
       type: object
