@@ -1,5 +1,5 @@
 import { urlService } from '../container';
-import { env } from '../config/env';
+import { env } from '../configs/env';
 import type { Request, Response } from 'express';
 
 /**

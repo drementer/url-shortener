@@ -44,9 +44,9 @@ url-shortener/
 │   ├── repositories/       # Prisma implementations of the storage contracts
 │   ├── mappers/            # Domain to API response mapping
 │   ├── validators/         # Request validation schemas (zod)
-│   ├── middleware/         # Rate limiting, validation, error handling
+│   ├── middlewares/        # Rate limiting, validation, error handling
 │   ├── errors/             # Domain error types
-│   ├── config/             # Environment and CORS configuration
+│   ├── configs/            # Environment and CORS configuration
 │   ├── utils/
 │   ├── db/                 # Prisma client instance
 │   ├── tests/
@@ -265,7 +265,7 @@ CLIENT_URL=http://localhost:8080   # optional, defaults to http://localhost:8080
 NODE_ENV=development           # optional, defaults to development
 ```
 
-These are validated on boot in `server/config/env.ts`. A missing or malformed
+These are validated on boot in `server/configs/env.ts`. A missing or malformed
 value stops the process with an explicit message instead of failing later on a
 request.
 

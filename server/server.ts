@@ -3,8 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 
 import router from './routes';
-import { corsOptions } from './config/cors';
-import { notFoundHandler, errorHandler } from './middleware/error-handler';
+import { corsOptions } from './configs/cors';
+import { notFoundHandler, errorHandler } from './middlewares/error-handler';
 
 const app = express();
 
