@@ -2,8 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 
-import router from './routers';
-import { corsOptions } from './configs/cors';
+import router from './routes';
+import { corsOptions } from './config/cors';
+import { notFoundHandler, errorHandler } from './middleware/error-handler';
 
 const app = express();
 
@@ -13,5 +14,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '10kb' }));
 
 app.use(router);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
