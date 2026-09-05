@@ -1,49 +1,85 @@
 import urlRepository from '../repositories/url';
 import clickRepository from '../repositories/click';
 import { createShortCode } from '../utils/short-code';
+import { ConflictError } from '../errors';
 
 const MAX_RETRIES = 5;
+const SLUG_TAKEN = 'This custom slug is already in use';
+
+/** Prisma reports a violated unique constraint, i.e. a taken short code, as P2002 */
+const isCollisionError = (error: unknown) =>
+  typeof error === 'object' &&
+  error !== null &&
+  'code' in error &&
+  error.code === 'P2002';
+
+const isExpired = (expiresAt: Date | null) =>
+  !!expiresAt && expiresAt < new Date();
+
+const HOUR_IN_MS = 60 * 60 * 1000;
+
+/**
+ * Turns a lifetime in hours into an absolute date, or null for no expiry.
+ * Counts elapsed time rather than calendar hours, so a link outlives a daylight
+ * saving transition by exactly the requested duration.
+ */
+const resolveExpiry = (expiresIn?: number) => {
+  if (!expiresIn) return null;
+
+  return new Date(Date.now() + expiresIn * HOUR_IN_MS);
+};
+
+type CreateUrlCommand = {
+  url: string;
+  customSlug?: string;
+  expiresIn?: number;
+};
+
+type ClickData = { userAgent?: string; referer?: string; ip?: string };
 
 const urlService = {
   async findAll() {
     return await urlRepository.findAll();
   },
 
-  async create(redirectUrl: string, customSlug: string, expiresAt: Date) {
-    let lastError: unknown;
+  // Input shape is guaranteed by createUrlSchema at the route level
+  async create({ url, customSlug, expiresIn }: CreateUrlCommand) {
+    const expiresAt = resolveExpiry(expiresIn);
 
-    // If customSlug is provided, check if it already exists
+    // Early check so a taken slug fails before hitting the unique constraint
     if (customSlug) {
       const existingUrl = await urlRepository.findByShortCode(customSlug);
-      if (existingUrl) {
-        throw new Error('This custom slug is already in use');
-      }
+      if (existingUrl) throw new ConflictError(SLUG_TAKEN);
     }
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        const shortCode = customSlug || createShortCode();
-
         return await urlRepository.create({
-          shortCode,
-          originalUrl: redirectUrl,
-          expiresAt: expiresAt || null,
+          shortCode: customSlug || createShortCode(),
+          // Kept alongside shortCode to record that the user picked this code
+          customSlug: customSlug ?? null,
+          originalUrl: url,
+          expiresAt,
         });
       } catch (error) {
-        if (error.code === 'P2002') throw error;
-        lastError = error;
+        if (!isCollisionError(error)) throw error;
+        // Retrying a custom slug is pointless, it would reuse the same value
+        if (customSlug) throw new ConflictError(SLUG_TAKEN);
       }
     }
 
-    throw lastError;
+    throw new Error('Could not generate a unique short code');
   },
 
-  async recordClick(
-    code: string,
-    clickData: { userAgent?: string; referer?: string; ip?: string },
-  ) {
+  /**
+   * Resolves a short code for redirecting. The click is only recorded for a
+   * live link, so hits on an expired one never reach the statistics.
+   */
+  async resolveRedirect(code: string, clickData: ClickData) {
     const url = await urlRepository.findByShortCode(code);
-    if (!url) return null;
+    if (!url) return { status: 'not_found' as const, url: null };
+
+    if (isExpired(url.expiresAt)) return { status: 'expired' as const, url };
 
     await clickRepository.create({
       urlId: url.id,
@@ -52,21 +88,19 @@ const urlService = {
       ip: clickData?.ip,
     });
 
-    return url;
+    return { status: 'active' as const, url };
   },
 
   async getStats(code: string) {
-    const url = await urlRepository.findByShortCodeWithClicks(code);
-    if (!url) return null;
-    url.clicks = url.clickEvents.length;
-    return url;
+    return await urlRepository.findByShortCodeWithClicks(code);
   },
 
   async delete(code: string) {
-    await urlRepository.delete(code);
+    const deletedCount = await urlRepository.delete(code);
 
-    return true;
+    return deletedCount > 0;
   },
 };
 
 export default urlService;
+export type { CreateUrlCommand };

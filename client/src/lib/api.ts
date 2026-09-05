@@ -9,6 +9,14 @@ const client = axios.create({
   },
 });
 
+// The API answers failures as { error: string }; surface that instead of the
+// generic axios message, so callers can show the real reason to the user.
+client.interceptors.response.use(undefined, (error) => {
+  const message = error.response?.data?.error;
+
+  return Promise.reject(message ? new Error(message) : error);
+});
+
 export const api = {
   get: async (path: string): Promise<AxiosResponse> => {
     return client.get(path);

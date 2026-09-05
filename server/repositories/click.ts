@@ -1,17 +1,8 @@
-import prisma from '../lib/prisma';
+import prisma from '../db/prisma';
+import type { ClickRepository } from '../types';
 
-const clickRepository = {
-  async create({
-    urlId,
-    userAgent,
-    referer,
-    ip,
-  }: {
-    urlId: string;
-    userAgent?: string;
-    referer?: string;
-    ip?: string;
-  }) {
+const clickRepository: ClickRepository = {
+  async create({ urlId, userAgent, referer, ip }) {
     const data = {
       urlId,
       userAgent,
