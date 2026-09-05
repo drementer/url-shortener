@@ -15,14 +15,17 @@ const isCollisionError = (error: unknown) =>
 const isExpired = (expiresAt: Date | null) =>
   !!expiresAt && expiresAt < new Date();
 
-/** Turns a lifetime in hours into an absolute date, or null for no expiry */
+const HOUR_IN_MS = 60 * 60 * 1000;
+
+/**
+ * Turns a lifetime in hours into an absolute date, or null for no expiry.
+ * Counts elapsed time rather than calendar hours, so a link outlives a daylight
+ * saving transition by exactly the requested duration.
+ */
 const resolveExpiry = (expiresIn?: number) => {
   if (!expiresIn) return null;
 
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + expiresIn);
-
-  return expiresAt;
+  return new Date(Date.now() + expiresIn * HOUR_IN_MS);
 };
 
 type CreateUrlCommand = {
