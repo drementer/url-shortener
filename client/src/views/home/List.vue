@@ -1,17 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+import { onMounted } from 'vue';
 
 import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { urlStorage } from '@/lib/localStorage';
+import { useSavedLinksStore } from '@/stores/saved-links';
 
 import { RouterLink } from 'vue-router';
-import type { CreateUrlResponse } from '@/types/api';
 
-const savedUrls = ref<CreateUrlResponse[]>([]);
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const { savedLinks: savedUrls, loadFromStorage } = useSavedLinksStore();
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
@@ -28,7 +25,7 @@ const truncateUrl = (url: string, maxLength: number = 50) => {
 };
 
 onMounted(() => {
-  savedUrls.value = urlStorage.getUrls();
+  loadFromStorage();
 });
 </script>
 

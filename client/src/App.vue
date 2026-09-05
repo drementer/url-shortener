@@ -8,6 +8,6 @@ import { RouterView } from 'vue-router';
 <template>
   <div class="min-h-dvh bg-background">
     <RouterView />
+    <Toaster :expand="true" richColors position="bottom-center" />
   </div>
-  <Toaster :expand="true" richColors position="bottom-center" />
 </template>
