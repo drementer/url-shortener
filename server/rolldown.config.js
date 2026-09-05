@@ -9,7 +9,9 @@ export default defineConfig({
     minify: true,
   },
   treeshake: true,
-  // Pattern to match all bare module IDs (not starting with . or /)
-  // and .json files (loaded at runtime)
+  /**
+   * Pattern to match all bare module IDs (not starting with . or /)
+   * and .json files (loaded at runtime)
+   */
   external: [/^[^./]/, /\.json$/],
 });

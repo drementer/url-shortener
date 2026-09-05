@@ -9,23 +9,21 @@ const envSchema = z.object({
     .enum(['development', 'production', 'test'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
-  CLIENT_URL: z.url('CLIENT_URL must be a valid URL').default(
-    'http://localhost:8080',
-  ),
+  CLIENT_URL: z
+    .url('CLIENT_URL must be a valid URL')
+    .default('http://localhost:8080'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 });
+
+export type Env = z.infer<typeof envSchema>;
 
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  const details = parsed.error.issues
-    .map((issue) => `  ${issue.path.join('.')}: ${issue.message}`)
-    .join('\n');
-
-  console.error(`Invalid environment configuration:\n${details}`);
+  console.error(
+    '❌ Invalid environment configuration:\n' + z.prettifyError(parsed.error),
+  );
   process.exit(1);
 }
 
-const env = parsed.data;
-
-export { env };
+export const env = parsed.data;
