@@ -1,8 +1,8 @@
+import { env } from './env';
 import type { CorsOptions } from 'cors';
 
 export const corsOptions: CorsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:8080',
+  origin: env.CLIENT_URL,
   methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   credentials: true,
 };
-
