@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Passwords hashed with scrypt from `node:crypto`, refresh tokens stored as a
   SHA-256 hash
 - `authAttempt` rate limit of 10 requests per 15 minutes on the credential routes
+- Refresh tokens are consumed atomically, so two requests holding the same token
+  cannot both walk away with a valid session
 
 ### Changed
 

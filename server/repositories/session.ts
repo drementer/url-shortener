@@ -13,10 +13,14 @@ const sessionRepository: SessionRepository = {
   },
 
   async revoke(id) {
-    return await prisma.session.update({
-      where: { id },
+    // Conditional on revokedAt, so of two requests holding the same token only
+    // one can consume it. The other gets a count of zero and knows it lost.
+    const { count } = await prisma.session.updateMany({
+      where: { id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
+
+    return count;
   },
 
   async revokeAllForUser(userId) {

@@ -98,7 +98,8 @@ type UserRepository = {
 type SessionRepository = {
   create(session: NewSession): Promise<Session>;
   findByTokenHash(refreshTokenHash: string): Promise<Session | null>;
-  revoke(id: string): Promise<unknown>;
+  /** Number of sessions actually revoked by the call, so at most one */
+  revoke(id: string): Promise<number>;
   revokeAllForUser(userId: string): Promise<unknown>;
 };
 

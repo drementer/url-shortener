@@ -4,6 +4,7 @@ import userRepository from '../repositories/user';
 import sessionRepository from '../repositories/session';
 import { env } from '../configs/env';
 import { ConflictError, UnauthorizedError } from '../errors';
+import { isUniqueViolation } from '../utils/prisma-error';
 import { hashPassword, verifyPassword } from '../utils/password';
 import {
   createAccessToken,
@@ -13,6 +14,7 @@ import {
 import type { User } from '../types';
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
+const EMAIL_TAKEN = 'This email is already registered';
 const INVALID_CREDENTIALS = 'Invalid email or password';
 const INVALID_REFRESH_TOKEN = 'Invalid refresh token';
 
@@ -56,16 +58,32 @@ const startSession = async (user: User, context: SessionContext) => {
   };
 };
 
-const authService = {
-  // Input shape is guaranteed by credentialsSchema at the route level
-  async register({ email, password }: Credentials, context: SessionContext) {
-    const existing = await userRepository.findByEmail(email);
-    if (existing) throw new ConflictError('This email is already registered');
-
-    const user = await userRepository.create({
+/**
+ * The lookup in register and this insert are two steps, so two requests for the
+ * same address can both pass the lookup. The unique constraint is what actually
+ * decides, and the loser answers with the same conflict.
+ */
+const createUser = async (email: string, password: string) => {
+  try {
+    return await userRepository.create({
       email,
       passwordHash: await hashPassword(password),
     });
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+
+    throw new ConflictError(EMAIL_TAKEN);
+  }
+};
+
+const authService = {
+  // Input shape is guaranteed by credentialsSchema at the route level
+  async register({ email, password }: Credentials, context: SessionContext) {
+    // Checked up front so the common case never pays for hashing a password
+    const existing = await userRepository.findByEmail(email);
+    if (existing) throw new ConflictError(EMAIL_TAKEN);
+
+    const user = await createUser(email, password);
 
     return await startSession(user, context);
   },
@@ -109,7 +127,15 @@ const authService = {
     const user = await userRepository.findById(session.userId);
     if (!user) throw new UnauthorizedError(INVALID_REFRESH_TOKEN);
 
-    await sessionRepository.revoke(session.id);
+    // Reading the session and retiring it are two steps, so a second request
+    // holding the same token can arrive in between. Consuming it conditionally
+    // is what decides: whoever fails to consume is holding a copy.
+    const consumed = await sessionRepository.revoke(session.id);
+
+    if (!consumed) {
+      await sessionRepository.revokeAllForUser(session.userId);
+      throw new UnauthorizedError(INVALID_REFRESH_TOKEN);
+    }
 
     return await startSession(user, context);
   },

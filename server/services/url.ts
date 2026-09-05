@@ -1,17 +1,11 @@
 import urlRepository from '../repositories/url';
 import clickRepository from '../repositories/click';
 import { createShortCode } from '../utils/short-code';
+import { isUniqueViolation } from '../utils/prisma-error';
 import { ConflictError } from '../errors';
 
 const MAX_RETRIES = 5;
 const SLUG_TAKEN = 'This custom slug is already in use';
-
-/** Prisma reports a violated unique constraint, i.e. a taken short code, as P2002 */
-const isCollisionError = (error: unknown) =>
-  typeof error === 'object' &&
-  error !== null &&
-  'code' in error &&
-  error.code === 'P2002';
 
 const isExpired = (expiresAt: Date | null) =>
   !!expiresAt && expiresAt < new Date();
@@ -66,7 +60,7 @@ const urlService = {
           userId,
         });
       } catch (error) {
-        if (!isCollisionError(error)) throw error;
+        if (!isUniqueViolation(error)) throw error;
         // Retrying a custom slug is pointless, it would reuse the same value
         if (customSlug) throw new ConflictError(SLUG_TAKEN);
       }

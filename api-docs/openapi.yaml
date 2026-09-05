@@ -172,6 +172,14 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Invalid refresh token
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
 
   /api/auth/logout:
     post:
@@ -207,6 +215,14 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Refresh token is required
+        '429':
+          description: More than 150 requests within a minute
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many requests, please try again later
 
   /api/auth/me:
     get:

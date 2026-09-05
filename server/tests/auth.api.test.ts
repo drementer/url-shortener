@@ -258,6 +258,27 @@ describe('POST /api/auth/refresh', () => {
     expect(await response.json()).toEqual({ error: 'Invalid refresh token' });
   });
 
+  it('lets only one of two simultaneous exchanges through', async () => {
+    const session = await registerSession('race@example.com');
+
+    const [first, second] = await Promise.all([
+      post('/api/auth/refresh', { refreshToken: session.refreshToken }),
+      post('/api/auth/refresh', { refreshToken: session.refreshToken }),
+    ]);
+
+    const accepted = [first, second].filter((r) => r.status === 200);
+    expect(accepted).toHaveLength(1);
+
+    // The losing request is holding a copy of the token, which ends the chain
+    const user = await prisma.user.findUnique({
+      where: { email: 'race@example.com' },
+    });
+    const live = await prisma.session.count({
+      where: { userId: user!.id, revokedAt: null },
+    });
+    expect(live).toBe(0);
+  });
+
   it('answers 400 when no refresh token is sent', async () => {
     const response = await post('/api/auth/refresh', {});
 

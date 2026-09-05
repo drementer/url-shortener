@@ -78,22 +78,6 @@ Or install for a specific workspace:
 bun install --filter server
 ```
 
-### Environment
-
-The server reads its configuration from `server/.env` and refuses to boot if
-something is missing:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | yes | SQLite connection string, e.g. `file:./dev.db` |
-| `JWT_ACCESS_SECRET` | yes | Signing key for access tokens, at least 32 characters |
-| `PORT` | no | Defaults to `3001` |
-| `CLIENT_URL` | no | Allowed CORS origin and redirect target, defaults to `http://localhost:8080` |
-| `ACCESS_TOKEN_TTL_SECONDS` | no | Access token lifetime, defaults to `900` |
-| `REFRESH_TOKEN_TTL_DAYS` | no | Refresh token lifetime, defaults to `30` |
-
-Generate a secret with `openssl rand -hex 32`.
-
 ### Database Setup
 
 ```bash
@@ -322,10 +306,17 @@ Create a `.env` file in the server directory:
 
 ```env
 DATABASE_URL="file:./dev.db"   # required
+JWT_ACCESS_SECRET=...          # required, at least 32 characters
 PORT=3001                      # optional, defaults to 3001
 CLIENT_URL=http://localhost:8080   # optional, defaults to http://localhost:8080
 NODE_ENV=development           # optional, defaults to development
+ACCESS_TOKEN_TTL_SECONDS=900   # optional, access token lifetime in seconds
+REFRESH_TOKEN_TTL_DAYS=30      # optional, refresh token lifetime in days
 ```
+
+Generate the signing key with `openssl rand -hex 32`. Changing it invalidates
+every access token already handed out, which is the quickest way to force all
+clients to sign in again.
 
 These are validated on boot in `server/configs/env.ts`. A missing or malformed
 value stops the process with an explicit message instead of failing later on a
