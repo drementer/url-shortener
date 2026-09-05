@@ -1,6 +1,7 @@
+import urlRepository from '../repositories/url';
+import clickRepository from '../repositories/click';
 import { createShortCode } from '../utils/short-code';
 import { ConflictError } from '../errors';
-import type { ClickRepository, UrlRepository } from './ports';
 
 const MAX_RETRIES = 5;
 const SLUG_TAKEN = 'This custom slug is already in use';
@@ -36,12 +37,7 @@ type CreateUrlCommand = {
 
 type ClickData = { userAgent?: string; referer?: string; ip?: string };
 
-type Dependencies = {
-  urlRepository: UrlRepository;
-  clickRepository: ClickRepository;
-};
-
-const createUrlService = ({ urlRepository, clickRepository }: Dependencies) => ({
+const urlService = {
   async findAll() {
     return await urlRepository.findAll();
   },
@@ -104,9 +100,7 @@ const createUrlService = ({ urlRepository, clickRepository }: Dependencies) => (
 
     return deletedCount > 0;
   },
-});
+};
 
-type UrlService = ReturnType<typeof createUrlService>;
-
-export { createUrlService };
-export type { CreateUrlCommand, UrlService };
+export default urlService;
+export type { CreateUrlCommand };

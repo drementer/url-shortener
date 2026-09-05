@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
-import { urlService } from '../container';
+import urlService from '../services/url';
 import prisma from '../db/prisma';
 import { ConflictError } from '../errors';
 

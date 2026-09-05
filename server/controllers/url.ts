@@ -1,4 +1,4 @@
-import { urlService } from '../container';
+import urlService from '../services/url';
 import { NotFoundError } from '../errors';
 import { toUrlResponse, toStatsResponse } from '../mappers/url';
 import type { Request, Response } from 'express';

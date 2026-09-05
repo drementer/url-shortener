@@ -1,4 +1,4 @@
-import { urlService } from '../container';
+import urlService from '../services/url';
 import { env } from '../configs/env';
 import type { Request, Response } from 'express';
 
