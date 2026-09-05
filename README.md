@@ -4,6 +4,7 @@ A fast and simple URL shortener monorepo built with Bun workspaces.
 
 ## Features
 
+- **Accounts** - Email and password sign up, every link owned by its creator
 - **URL Shortening** - Generate short codes for long URLs
 - **Analytics** - Track clicks with user agent, referer, and IP
 - **Link Expiry** - Set expiration time for temporary links
@@ -122,10 +123,48 @@ from scratch on every run, so it never touches development data.
 
 ## API Reference
 
+### Authentication
+
+Every `/api/urls` route belongs to an account and requires an access token. Only
+the redirect (`GET /:code`), the health check and the auth routes themselves are
+public.
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "user@example.com", "password": "correct horse battery" }
+```
+
+**Response (201 Created for register, 200 OK for login):**
+
+```json
+{
+  "user": { "id": "cmjps...", "email": "user@example.com", "createdAt": "..." },
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "3f0c1d1e9a7b4c2d...",
+  "expiresIn": 900
+}
+```
+
+Send the access token on every other request:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Once it expires, exchange the refresh token for a new pair with
+`POST /api/auth/refresh`. Each refresh token works exactly once: the exchange
+retires it, and replaying a retired one is treated as a leak and ends every
+session of that user. `POST /api/auth/logout` ends a single session, and
+`GET /api/auth/me` answers with the account behind an access token.
+
 ### Create Short URL
 
 ```http
 POST /api/urls
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {
@@ -161,7 +200,10 @@ Reserved slugs: `api`, `404`, `expired`, `stats`.
 
 ```http
 GET /api/urls
+Authorization: Bearer <accessToken>
 ```
+
+Answers with the links of the signed in user only.
 
 **Response:**
 
@@ -192,6 +234,7 @@ an expired one to `CLIENT_URL/expired/:code`.
 
 ```http
 GET /api/urls/:code
+Authorization: Bearer <accessToken>
 ```
 
 **Response:**
@@ -217,7 +260,11 @@ GET /api/urls/:code
 
 `clicks` is derived from the recorded click events, so the list and the
 statistics endpoint always agree. Visitor IP addresses are stored but never
-returned, since this endpoint requires no authentication.
+returned.
+
+A code belonging to another account answers `404`, exactly like an unknown one,
+so the endpoint cannot be used to find out which short codes are taken. Deleting
+one (`DELETE /api/urls/:code`) follows the same rule.
 
 ### Delete URL
 
@@ -255,14 +302,16 @@ GET /api/status
 
 ## Environment Variables
 
-Create a `.env` file in the server directory:
+Copy the template and fill it in. It lists every variable with its default and
+says which ones are required:
 
-```env
-DATABASE_URL="file:./dev.db"   # required
-PORT=3001                      # optional, defaults to 3001
-CLIENT_URL=http://localhost:8080   # optional, defaults to http://localhost:8080
-NODE_ENV=development           # optional, defaults to development
+```bash
+cd server
+cp .env.example .env
 ```
+
+The only value without a sensible default is `JWT_ACCESS_SECRET`; generate one
+with `openssl rand -hex 32`.
 
 These are validated on boot in `server/configs/env.ts`. A missing or malformed
 value stops the process with an explicit message instead of failing later on a

@@ -2,8 +2,9 @@ import prisma from '../db/prisma';
 import type { UrlRepository } from '../types';
 
 const urlRepository: UrlRepository = {
-  async findAll() {
+  async findAllByUser(userId) {
     const urls = await prisma.url.findMany({
+      where: { userId },
       include: { _count: { select: { clickEvents: true } } },
     });
 
@@ -14,12 +15,13 @@ const urlRepository: UrlRepository = {
     }));
   },
 
-  async create({ shortCode, customSlug, originalUrl, expiresAt }) {
+  async create({ shortCode, customSlug, originalUrl, expiresAt, userId }) {
     const data = {
       shortCode,
       customSlug,
       originalUrl,
       expiresAt,
+      userId,
     };
 
     return await prisma.url.create({ data });
@@ -31,19 +33,19 @@ const urlRepository: UrlRepository = {
     });
   },
 
-  async findByShortCodeWithClicks(shortCode) {
+  async findOwnedWithClicks(shortCode, userId) {
     return await prisma.url.findFirst({
-      where: { shortCode },
+      where: { shortCode, userId },
       include: {
         clickEvents: true,
       },
     });
   },
 
-  async delete(shortCode) {
+  async deleteOwned(shortCode, userId) {
     // deleteMany does not throw when no row matches, unlike delete
     const { count } = await prisma.url.deleteMany({
-      where: { shortCode },
+      where: { shortCode, userId },
     });
 
     return count;

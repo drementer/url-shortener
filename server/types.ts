@@ -14,6 +14,7 @@ type Url = {
   originalUrl: string;
   expiresAt: Date | null;
   createdAt: Date;
+  userId: string | null;
 };
 
 type Click = {
@@ -32,6 +33,36 @@ type NewUrl = {
   customSlug: string | null;
   originalUrl: string;
   expiresAt: Date | null;
+  userId: string;
+};
+
+/** The user as the API is allowed to see it, i.e. without the password hash */
+type User = {
+  id: string;
+  email: string;
+  createdAt: Date;
+};
+
+type UserWithPassword = User & { passwordHash: string };
+
+type NewUser = {
+  email: string;
+  passwordHash: string;
+};
+
+type Session = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+};
+
+type NewSession = {
+  userId: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
+  userAgent?: string;
+  ip?: string;
 };
 
 type NewClick = {
@@ -41,14 +72,35 @@ type NewClick = {
   ip?: string;
 };
 
+/**
+ * Every method carrying a userId scopes its query to that owner, so a link
+ * belonging to someone else is indistinguishable from one that does not exist.
+ * findByShortCode is the exception: the public redirect has no owner.
+ */
 type UrlRepository = {
-  findAll(): Promise<UrlWithClickCount[]>;
+  findAllByUser(userId: string): Promise<UrlWithClickCount[]>;
   create(url: NewUrl): Promise<Url>;
   findByShortCode(shortCode: string): Promise<Url | null>;
-  findByShortCodeWithClicks(
+  findOwnedWithClicks(
     shortCode: string,
+    userId: string,
   ): Promise<UrlWithClickEvents | null>;
-  delete(shortCode: string): Promise<number>;
+  deleteOwned(shortCode: string, userId: string): Promise<number>;
+};
+
+type UserRepository = {
+  create(user: NewUser): Promise<User>;
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
+  findByEmailWithPassword(email: string): Promise<UserWithPassword | null>;
+};
+
+type SessionRepository = {
+  create(session: NewSession): Promise<Session>;
+  findByTokenHash(refreshTokenHash: string): Promise<Session | null>;
+  /** Number of sessions actually revoked by the call, so at most one */
+  revoke(id: string): Promise<number>;
+  revokeAllForUser(userId: string): Promise<unknown>;
 };
 
 type ClickRepository = {
@@ -60,8 +112,15 @@ export type {
   Click,
   NewUrl,
   NewClick,
+  User,
+  UserWithPassword,
+  NewUser,
+  Session,
+  NewSession,
   UrlWithClickCount,
   UrlWithClickEvents,
   UrlRepository,
   ClickRepository,
+  UserRepository,
+  SessionRepository,
 };
