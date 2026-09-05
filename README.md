@@ -302,21 +302,16 @@ GET /api/status
 
 ## Environment Variables
 
-Create a `.env` file in the server directory:
+Copy the template and fill it in. It lists every variable with its default and
+says which ones are required:
 
-```env
-DATABASE_URL="file:./dev.db"   # required
-JWT_ACCESS_SECRET=...          # required, at least 32 characters
-PORT=3001                      # optional, defaults to 3001
-CLIENT_URL=http://localhost:8080   # optional, defaults to http://localhost:8080
-NODE_ENV=development           # optional, defaults to development
-ACCESS_TOKEN_TTL_SECONDS=900   # optional, access token lifetime in seconds
-REFRESH_TOKEN_TTL_DAYS=30      # optional, refresh token lifetime in days
+```bash
+cd server
+cp .env.example .env
 ```
 
-Generate the signing key with `openssl rand -hex 32`. Changing it invalidates
-every access token already handed out, which is the quickest way to force all
-clients to sign in again.
+The only value without a sensible default is `JWT_ACCESS_SECRET`; generate one
+with `openssl rand -hex 32`.
 
 These are validated on boot in `server/configs/env.ts`. A missing or malformed
 value stops the process with an explicit message instead of failing later on a
