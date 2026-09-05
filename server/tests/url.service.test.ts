@@ -40,7 +40,7 @@ describe('urlService.create', () => {
       customSlug: 'taken',
     });
 
-    expect(attempt).rejects.toThrow(ConflictError);
+    await expect(attempt).rejects.toThrow(ConflictError);
   });
 
   it('turns expiresIn hours into an absolute date', async () => {

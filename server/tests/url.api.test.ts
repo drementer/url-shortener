@@ -66,9 +66,11 @@ describe('POST /api/urls', () => {
   });
 
   it('answers 409 when the custom slug is taken', async () => {
+    await post({ url: 'https://example.com', customSlug: 'conflict-fixture' });
+
     const response = await post({
       url: 'https://other.com',
-      customSlug: 'api-test',
+      customSlug: 'conflict-fixture',
     });
 
     expect(response.status).toBe(409);
@@ -105,9 +107,10 @@ describe('error responses', () => {
 
 describe('GET /api/urls', () => {
   it('never exposes visitor IPs in the statistics', async () => {
-    await fetch(`${baseUrl}/api-test`, { redirect: 'manual' });
+    await post({ url: 'https://example.com', customSlug: 'stats-fixture' });
+    await fetch(`${baseUrl}/stats-fixture`, { redirect: 'manual' });
 
-    const response = await fetch(`${baseUrl}/api/urls/api-test`);
+    const response = await fetch(`${baseUrl}/api/urls/stats-fixture`);
     const stats = await response.json();
 
     expect(stats.clicks).toBe(1);
