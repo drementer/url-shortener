@@ -39,8 +39,7 @@ url-shortener/
 │   │   └── migrations/
 │   ├── routes/             # Route definitions and middleware wiring
 │   ├── controllers/        # Request parsing and response shaping
-│   ├── services/           # Business rules and the storage contracts they need
-│   ├── entities/           # Domain types, free of any database concern
+│   ├── services/           # Business rules
 │   ├── repositories/       # Prisma implementations of the storage contracts
 │   ├── mappers/            # Domain to API response mapping
 │   ├── validators/         # Request validation schemas (zod)
@@ -50,7 +49,7 @@ url-shortener/
 │   ├── utils/
 │   ├── db/                 # Prisma client instance
 │   ├── tests/
-│   ├── container.ts        # Composition root wiring services to repositories
+│   ├── types.ts            # Domain shapes and storage contracts
 │   ├── server.ts
 │   └── index.ts
 └── client/                 # Frontend (Vue 3)

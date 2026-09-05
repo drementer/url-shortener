@@ -1,5 +1,5 @@
 import prisma from '../db/prisma';
-import type { ClickRepository } from '../services/ports';
+import type { ClickRepository } from '../types';
 
 const clickRepository: ClickRepository = {
   async create({ urlId, userAgent, referer, ip }) {

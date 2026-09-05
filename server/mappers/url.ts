@@ -1,4 +1,4 @@
-import type { Click, Url, UrlWithClickEvents } from '../entities/url';
+import type { Click, Url, UrlWithClickEvents } from '../types';
 
 // clickCount is absent on a freshly created url, which by definition has none
 type MappableUrl = Url & { clickCount?: number };

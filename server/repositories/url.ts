@@ -1,5 +1,5 @@
 import prisma from '../db/prisma';
-import type { UrlRepository } from '../services/ports';
+import type { UrlRepository } from '../types';
 
 const urlRepository: UrlRepository = {
   async findAll() {
