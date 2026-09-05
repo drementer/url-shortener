@@ -7,7 +7,7 @@
     "dev": "bun --watch index.ts",
     "build": "rolldown -c rolldown.config.js",
     "start": "bun dist/index.js",
-    "test": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && DATABASE_URL=\"file:./test.db\" bun test"
+    "test": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && DATABASE_URL=\"file:./test.db\" JWT_ACCESS_SECRET=\"test-secret-not-used-outside-the-test-suite\" bun test"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +20,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
     "nanoid": "^5.1.6",
     "prisma": "5.22.0",
     "zod": "^4.5.4"
@@ -28,6 +29,7 @@
     "@types/bun": "^1.4.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "rolldown": "^1.0.0-beta.46"
   }
 }

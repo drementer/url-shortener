@@ -18,6 +18,12 @@ class BadRequestError extends AppError {
   }
 }
 
+class UnauthorizedError extends AppError {
+  constructor(message = 'Authentication required') {
+    super(message, 401);
+  }
+}
+
 class NotFoundError extends AppError {
   constructor(message = 'Not found') {
     super(message, 404);
@@ -30,4 +36,10 @@ class ConflictError extends AppError {
   }
 }
 
-export { AppError, BadRequestError, NotFoundError, ConflictError };
+export {
+  AppError,
+  BadRequestError,
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+};

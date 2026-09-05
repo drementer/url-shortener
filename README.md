@@ -4,6 +4,7 @@ A fast and simple URL shortener monorepo built with Bun workspaces.
 
 ## Features
 
+- **Accounts** - Email and password sign up, every link owned by its creator
 - **URL Shortening** - Generate short codes for long URLs
 - **Analytics** - Track clicks with user agent, referer, and IP
 - **Link Expiry** - Set expiration time for temporary links
@@ -77,6 +78,22 @@ Or install for a specific workspace:
 bun install --filter server
 ```
 
+### Environment
+
+The server reads its configuration from `server/.env` and refuses to boot if
+something is missing:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | yes | SQLite connection string, e.g. `file:./dev.db` |
+| `JWT_ACCESS_SECRET` | yes | Signing key for access tokens, at least 32 characters |
+| `PORT` | no | Defaults to `3001` |
+| `CLIENT_URL` | no | Allowed CORS origin and redirect target, defaults to `http://localhost:8080` |
+| `ACCESS_TOKEN_TTL_SECONDS` | no | Access token lifetime, defaults to `900` |
+| `REFRESH_TOKEN_TTL_DAYS` | no | Refresh token lifetime, defaults to `30` |
+
+Generate a secret with `openssl rand -hex 32`.
+
 ### Database Setup
 
 ```bash
@@ -122,10 +139,48 @@ from scratch on every run, so it never touches development data.
 
 ## API Reference
 
+### Authentication
+
+Every `/api/urls` route belongs to an account and requires an access token. Only
+the redirect (`GET /:code`), the health check and the auth routes themselves are
+public.
+
+```http
+POST /api/auth/register
+POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "user@example.com", "password": "correct horse battery" }
+```
+
+**Response (201 Created for register, 200 OK for login):**
+
+```json
+{
+  "user": { "id": "cmjps...", "email": "user@example.com", "createdAt": "..." },
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "3f0c1d1e9a7b4c2d...",
+  "expiresIn": 900
+}
+```
+
+Send the access token on every other request:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Once it expires, exchange the refresh token for a new pair with
+`POST /api/auth/refresh`. Each refresh token works exactly once: the exchange
+retires it, and replaying a retired one is treated as a leak and ends every
+session of that user. `POST /api/auth/logout` ends a single session, and
+`GET /api/auth/me` answers with the account behind an access token.
+
 ### Create Short URL
 
 ```http
 POST /api/urls
+Authorization: Bearer <accessToken>
 Content-Type: application/json
 
 {
@@ -161,7 +216,10 @@ Reserved slugs: `api`, `404`, `expired`, `stats`.
 
 ```http
 GET /api/urls
+Authorization: Bearer <accessToken>
 ```
+
+Answers with the links of the signed in user only.
 
 **Response:**
 
@@ -192,6 +250,7 @@ an expired one to `CLIENT_URL/expired/:code`.
 
 ```http
 GET /api/urls/:code
+Authorization: Bearer <accessToken>
 ```
 
 **Response:**
@@ -217,7 +276,11 @@ GET /api/urls/:code
 
 `clicks` is derived from the recorded click events, so the list and the
 statistics endpoint always agree. Visitor IP addresses are stored but never
-returned, since this endpoint requires no authentication.
+returned.
+
+A code belonging to another account answers `404`, exactly like an unknown one,
+so the endpoint cannot be used to find out which short codes are taken. Deleting
+one (`DELETE /api/urls/:code`) follows the same rule.
 
 ### Delete URL
 

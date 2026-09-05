@@ -6,17 +6,41 @@ import prisma from '../db/prisma';
 
 let server: Server;
 let baseUrl: string;
+let accessToken: string;
+
+const authHeaders = () => ({
+  'content-type': 'application/json',
+  authorization: `Bearer ${accessToken}`,
+});
 
 const post = (body: unknown) =>
   fetch(`${baseUrl}/api/urls`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(body),
   });
+
+/** Links are owned, so the suite needs an account to create them as */
+const registerFixtureUser = async () => {
+  const response = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      email: 'url-api-test@example.com',
+      password: 'correct horse battery',
+    }),
+  });
+
+  const { accessToken } = await response.json();
+
+  return accessToken as string;
+};
 
 beforeAll(async () => {
   await prisma.click.deleteMany();
   await prisma.url.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.user.deleteMany();
 
   await new Promise<void>((resolve) => {
     server = app.listen(0, () => {
@@ -25,6 +49,8 @@ beforeAll(async () => {
       resolve();
     });
   });
+
+  accessToken = await registerFixtureUser();
 });
 
 afterAll(() => {
@@ -40,7 +66,10 @@ describe('POST /api/urls', () => {
   });
 
   it('rejects a reserved custom slug', async () => {
-    const response = await post({ url: 'https://example.com', customSlug: 'api' });
+    const response = await post({
+      url: 'https://example.com',
+      customSlug: 'api',
+    });
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
@@ -82,7 +111,9 @@ describe('POST /api/urls', () => {
 
 describe('error responses', () => {
   it('answers 404 as JSON for an unknown code', async () => {
-    const response = await fetch(`${baseUrl}/api/urls/nothing-here`);
+    const response = await fetch(`${baseUrl}/api/urls/nothing-here`, {
+      headers: authHeaders(),
+    });
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: 'URL not found' });
@@ -91,6 +122,7 @@ describe('error responses', () => {
   it('answers 404 as JSON when deleting an unknown code', async () => {
     const response = await fetch(`${baseUrl}/api/urls/nothing-here`, {
       method: 'DELETE',
+      headers: authHeaders(),
     });
 
     expect(response.status).toBe(404);
@@ -110,7 +142,9 @@ describe('GET /api/urls', () => {
     await post({ url: 'https://example.com', customSlug: 'stats-fixture' });
     await fetch(`${baseUrl}/stats-fixture`, { redirect: 'manual' });
 
-    const response = await fetch(`${baseUrl}/api/urls/stats-fixture`);
+    const response = await fetch(`${baseUrl}/api/urls/stats-fixture`, {
+      headers: authHeaders(),
+    });
     const stats = await response.json();
 
     expect(stats.clicks).toBe(1);

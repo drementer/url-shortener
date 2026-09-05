@@ -16,10 +16,15 @@ servers:
 tags:
   - name: Status
     description: Health check endpoints
+  - name: Auth
+    description: Account and session endpoints
   - name: URLs
     description: URL management endpoints
   - name: Redirect
     description: URL redirection endpoint
+
+security:
+  - bearerAuth: []
 
 paths:
   /api/status:
@@ -27,6 +32,7 @@ paths:
       summary: Health Check
       description: Verify that the API server is running and healthy
       tags: [Status]
+      security: []
       responses:
         '200':
           description: Server is healthy and operational
@@ -35,14 +41,200 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthCheckResponse'
 
+  /api/auth/register:
+    post:
+      summary: Register
+      description: Create an account and start a session for it
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+      responses:
+        '201':
+          description: Account created and session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          description: Request body failed validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidEmail:
+                  summary: Missing or malformed email
+                  value:
+                    error: A valid email is required
+                missingPassword:
+                  summary: No password sent
+                  value:
+                    error: A password is required
+                shortPassword:
+                  summary: Password too short
+                  value:
+                    error: Password must be at least 8 characters
+        '409':
+          description: The email already belongs to an account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: This email is already registered
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
+
+  /api/auth/login:
+    post:
+      summary: Log In
+      description: Exchange email and password for a new session
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialsRequest'
+      responses:
+        '200':
+          description: Session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: >-
+            The email or the password is wrong. The same message covers both, so
+            the response cannot be used to find out which emails are registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid email or password
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh Session
+      description: >-
+        Exchange a refresh token for a new token pair. The token sent in is
+        retired by the exchange, so each one works exactly once. Replaying a
+        retired token is treated as a leak and ends every session of that user.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: A new token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          description: Refresh token missing from the request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Refresh token is required
+        '401':
+          description: The refresh token is unknown, already used or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid refresh token
+
+  /api/auth/logout:
+    post:
+      summary: Log Out
+      description: >-
+        End the session behind the given refresh token. An unknown token is
+        answered the same way, since the caller is logged out either way.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                    example: Logged out successfully
+        '400':
+          description: Refresh token missing from the request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Refresh token is required
+
+  /api/auth/me:
+    get:
+      summary: Get Current User
+      description: The account the access token belongs to
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The signed in account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/urls:
     get:
       summary: Get All URLs
-      description: Retrieve a list of all shortened URLs in the system
+      description: Retrieve the shortened URLs belonging to the signed in user
       tags: [URLs]
       responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '200':
-          description: Successfully retrieved all URLs
+          description: Successfully retrieved the URLs of the caller
           content:
             application/json:
               schema:
@@ -60,7 +252,7 @@ paths:
 
     post:
       summary: Create Short URL
-      description: Create a new shortened URL from an original URL
+      description: Create a new shortened URL owned by the signed in user
       tags: [URLs]
       requestBody:
         required: true
@@ -98,6 +290,8 @@ paths:
                   summary: expiresIn is not a number
                   value:
                     error: expiresIn must be a number of hours
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '409':
           description: The requested custom slug is already taken
           content:
@@ -118,7 +312,10 @@ paths:
   /api/urls/{code}:
     get:
       summary: Get URL Statistics
-      description: Retrieve statistics and click events for a specific shortened URL
+      description: >-
+        Retrieve statistics and click events for one of your own shortened URLs.
+        A code owned by someone else answers 404, exactly like an unknown one,
+        so the endpoint cannot be used to find out which codes are taken.
       tags: [URLs]
       parameters:
         - in: path
@@ -135,8 +332,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UrlStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: URL not found
+          description: The URL does not exist or belongs to someone else
           content:
             application/json:
               schema:
@@ -154,7 +353,9 @@ paths:
 
     delete:
       summary: Delete URL
-      description: Delete a shortened URL by its short code
+      description: >-
+        Delete one of your own shortened URLs by its short code. A code owned by
+        someone else answers 404, exactly like an unknown one.
       tags: [URLs]
       parameters:
         - in: path
@@ -176,8 +377,10 @@ paths:
                   message:
                     type: string
                     example: URL deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
-          description: URL not found
+          description: The URL does not exist or belongs to someone else
           content:
             application/json:
               schema:
@@ -209,6 +412,7 @@ paths:
         when the link is still live. Unknown and expired codes are redirected to
         the client application instead of answering with an error.
       tags: [Redirect]
+      security: []
       parameters:
         - in: path
           name: code
@@ -234,6 +438,33 @@ paths:
               example: https://example.com/very/long/url
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        The access token from a register, login or refresh response, sent as
+        `Authorization: Bearer <accessToken>`. It expires after 15 minutes by
+        default, after which the refresh token buys a new one.
+
+  responses:
+    Unauthorized:
+      description: The access token is missing, malformed or expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing:
+              summary: No token sent
+              value:
+                error: Authentication required
+            invalid:
+              summary: Token does not verify
+              value:
+                error: Invalid or expired token
+
   schemas:
     Url:
       type: object
@@ -355,6 +586,68 @@ components:
           minimum: 1
           maximum: 8760
           example: 24
+
+    CredentialsRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Stored lowercased, so casing never creates a second account
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          example: correct horse battery staple
+
+    RefreshTokenRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          description: The refresh token from the last session response
+          example: 3f0c1d1e9a7b4c2d8e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b
+
+    User:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: string
+          description: Unique user identifier (CUID)
+          example: clxyz123abc456def
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: '2025-01-01T10:30:00Z'
+
+    SessionResponse:
+      type: object
+      required: [user, accessToken, refreshToken, expiresIn]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+          description: Sent as a Bearer token on every authenticated request
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbHh5ejEyMyJ9
+        refreshToken:
+          type: string
+          description: Exchanged for a new pair once the access token expires
+          example: 3f0c1d1e9a7b4c2d8e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b
+        expiresIn:
+          type: integer
+          description: Lifetime of the access token in seconds
+          example: 900
 
     ErrorResponse:
       type: object

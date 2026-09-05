@@ -38,12 +38,15 @@ type CreateUrlCommand = {
 type ClickData = { userAgent?: string; referer?: string; ip?: string };
 
 const urlService = {
-  async findAll() {
-    return await urlRepository.findAll();
+  async findAll(userId: string) {
+    return await urlRepository.findAllByUser(userId);
   },
 
   // Input shape is guaranteed by createUrlSchema at the route level
-  async create({ url, customSlug, expiresIn }: CreateUrlCommand) {
+  async create(
+    { url, customSlug, expiresIn }: CreateUrlCommand,
+    userId: string,
+  ) {
     const expiresAt = resolveExpiry(expiresIn);
 
     // Early check so a taken slug fails before hitting the unique constraint
@@ -60,6 +63,7 @@ const urlService = {
           customSlug: customSlug ?? null,
           originalUrl: url,
           expiresAt,
+          userId,
         });
       } catch (error) {
         if (!isCollisionError(error)) throw error;
@@ -91,12 +95,16 @@ const urlService = {
     return { status: 'active' as const, url };
   },
 
-  async getStats(code: string) {
-    return await urlRepository.findByShortCodeWithClicks(code);
+  /**
+   * Both of these answer as if the link did not exist when it belongs to
+   * someone else, so no one can probe which short codes are taken.
+   */
+  async getStats(code: string, userId: string) {
+    return await urlRepository.findOwnedWithClicks(code, userId);
   },
 
-  async delete(code: string) {
-    const deletedCount = await urlRepository.delete(code);
+  async delete(code: string, userId: string) {
+    const deletedCount = await urlRepository.deleteOwned(code, userId);
 
     return deletedCount > 0;
   },
