@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --watch index.ts",
     "build": "rolldown -c rolldown.config.js",
-    "start": "bun dist/index.js"
+    "start": "bun dist/index.js",
+    "test": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && DATABASE_URL=\"file:./test.db\" bun test"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "rolldown": "^1.0.0-beta.46"
