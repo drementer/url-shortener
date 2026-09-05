@@ -218,22 +218,20 @@ paths:
           description: The short code of the URL
           example: abc123
       responses:
-        '301':
-          description: Redirect to original URL
+        '302':
+          description: >-
+            Always a redirect, never an error body. A live link redirects to its
+            original URL, an expired one to CLIENT_URL/expired/{code} and an
+            unknown code to CLIENT_URL/404, so the client application renders
+            those two cases itself.
           headers:
             Location:
               schema:
                 type: string
-              description: The original URL to redirect to
+              description: >-
+                The original URL, CLIENT_URL/expired/{code} or CLIENT_URL/404
+                depending on the state of the code
               example: https://example.com/very/long/url
-        '404':
-          description: URL not found or expired
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              example:
-                error: URL not found or expired
 
 components:
   schemas:
