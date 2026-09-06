@@ -12,7 +12,7 @@ let ownerId: string;
 
 let clientCount = 0;
 
-/** The redirect is behind the general limiter, so each visit gets its own address */
+/** Behind the general limiter, so every visit comes from its own address */
 const visit = (code: string, headers: Record<string, string> = {}) =>
   fetch(`${baseUrl}/${code}`, {
     redirect: 'manual',
@@ -56,7 +56,7 @@ describe('GET /:code', () => {
     expect(response.headers.get('location')).toBe('https://example.com/target');
   });
 
-  it('answers 302 rather than 301, so the browser keeps coming back', async () => {
+  it('answers 302 rather than 301, so the browser comes back', async () => {
     await createLink('not-cached');
 
     // A cached permanent redirect would hide repeat clicks and outlive deletion
