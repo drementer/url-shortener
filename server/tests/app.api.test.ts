@@ -67,7 +67,9 @@ describe('cross origin access', () => {
 
   it('never widens the allowed origin for another site', async () => {
     // The browser compares the two itself, so echoing the caller would open it
-    const response = await get('/api/status', { origin: 'http://evil.example' });
+    const response = await get('/api/status', {
+      origin: 'http://evil.example',
+    });
 
     expect(response.headers.get('access-control-allow-origin')).not.toBe(
       'http://evil.example',
@@ -90,6 +92,37 @@ describe('response hardening', () => {
   });
 });
 
+describe('a body the parser refuses', () => {
+  const post = (body: string) =>
+    fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': `10.2.3.${++clientCount}`,
+      },
+      body,
+    });
+
+  it('answers 400 for a body that is not JSON', async () => {
+    const response = await post('{not json');
+
+    // The client sent nonsense, which is not a failure of the server
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: 'Invalid JSON body' });
+  });
+
+  it('answers 413 for a body past the 10kb limit', async () => {
+    const response = await post(
+      JSON.stringify({ email: 'big@example.com', password: 'x'.repeat(20000) }),
+    );
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: 'Request body is too large',
+    });
+  });
+});
+
 describe('authentication guard', () => {
   const paths = [
     { method: 'GET', path: '/api/urls' },
@@ -98,7 +131,7 @@ describe('authentication guard', () => {
     { method: 'DELETE', path: '/api/urls/some-code' },
   ];
 
-  it.each(paths)('answers 401 on $method $path with no token', async (route) => {
+  it.each(paths)('answers 401 on $method $path unsigned', async (route) => {
     const response = await fetch(`${baseUrl}${route.path}`, {
       method: route.method,
       headers: {

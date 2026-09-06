@@ -83,6 +83,60 @@ describe('errorHandler', () => {
     }
   });
 
+  it('answers a rejected body with the status body-parser gave it', () => {
+    const log = spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      // What express.json() throws: an http-errors object, not an AppError
+      const malformed = Object.assign(new SyntaxError('Unexpected token n'), {
+        status: 400,
+        statusCode: 400,
+        expose: true,
+        type: 'entity.parse.failed',
+      });
+      const oversized = Object.assign(new Error('request entity too large'), {
+        status: 413,
+        statusCode: 413,
+        expose: true,
+        type: 'entity.too.large',
+      });
+
+      expect(run(malformed).sent).toEqual({
+        status: 400,
+        body: { error: 'Invalid JSON body' },
+      });
+      expect(run(oversized).sent).toEqual({
+        status: 413,
+        body: { error: 'Request body is too large' },
+      });
+      // A client sending nonsense is not a failure worth logging
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it('does not read a status off an error that hides its details', () => {
+    const log = spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      // expose is false for a 5xx, and any other status stays our problem
+      const internal = Object.assign(new Error('boom'), {
+        status: 500,
+        expose: false,
+      });
+      const unmapped = Object.assign(new Error('teapot'), {
+        status: 418,
+        expose: true,
+      });
+
+      expect(run(internal).sent.status).toBe(500);
+      expect(run(unmapped).sent.status).toBe(500);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it('leaves a response already on its way to Express', () => {
     // A redirect may have been sent, so the connection is no longer ours
     const error = new NotFoundError();
