@@ -333,7 +333,7 @@ Two consequences worth stating plainly:
   modify this software and offer the modified version over a network, you must
   offer its Corresponding Source to the users of that service under this
   license.
-- **Attribution is required.** Under section 7(b) of the license, every
-  deployment must keep a visible credit to the upstream project. The exact
-  wording is in [NOTICE](NOTICE), the term itself in
+- **Attribution is required.** Under section 7(b) of the license, network
+  services with a user-facing interface must keep a visible credit to the
+  upstream project. The exact wording is in [NOTICE](NOTICE), the term itself in
   [ADDITIONAL_TERMS.md](ADDITIONAL_TERMS.md).
