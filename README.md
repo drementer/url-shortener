@@ -40,7 +40,8 @@ url-shortener/
 │   │   └── migrations/
 │   ├── routes/             # Route definitions and middleware wiring
 │   ├── controllers/        # Request parsing and response shaping
-│   ├── services/           # Business rules
+│   ├── use-cases/          # One file per use case, wired in each index.ts
+│   ├── domain/             # Link rules, free of storage and transport
 │   ├── repositories/       # Prisma implementations of the storage contracts
 │   ├── mappers/            # Domain to API response mapping
 │   ├── validators/         # Request validation schemas (zod)

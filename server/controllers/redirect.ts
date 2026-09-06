@@ -1,4 +1,4 @@
-import urlService from '../services/url';
+import { resolveRedirect } from '../use-cases/url';
 import { env } from '../configs/env';
 import type { Request, Response } from 'express';
 
@@ -12,7 +12,7 @@ import type { Request, Response } from 'express';
 const handleRedirect = async (req: Request, res: Response) => {
   const code = req.params.code as string;
 
-  const { status, url } = await urlService.resolveRedirect(code, {
+  const { status, url } = await resolveRedirect(code, {
     userAgent: req.get('user-agent'),
     referer: req.get('referer'),
     ip: req.ip,

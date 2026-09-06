@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import urlRepository from '../repositories/url';
 import prisma from '../db/prisma';
-import { isUniqueViolation } from '../utils/prisma-error';
+import { UniqueConstraintError } from '../errors';
 import { resetDatabase, createUser } from './helpers';
 
 let ownerId: string;
@@ -36,15 +36,13 @@ describe('urlRepository.create', () => {
     expect(url.createdAt).toBeDate();
   });
 
-  it('reports a taken short code as a unique violation', async () => {
+  it('reports a taken short code as a domain error', async () => {
     await urlRepository.create(newUrl('taken'));
 
-    // The service turns exactly this into a 409, so the code has to survive
-    const error = await urlRepository
-      .create(newUrl('taken', strangerId))
-      .catch((error: unknown) => error);
+    // Prisma's own code is translated here, so no use case has to know it
+    const attempt = urlRepository.create(newUrl('taken', strangerId));
 
-    expect(isUniqueViolation(error)).toBe(true);
+    await expect(attempt).rejects.toThrow(UniqueConstraintError);
   });
 });
 

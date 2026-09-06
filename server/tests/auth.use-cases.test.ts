@@ -1,5 +1,11 @@
 import { describe, expect, it, beforeEach, spyOn } from 'bun:test';
-import authService from '../services/auth';
+import {
+  findCurrentUser,
+  login,
+  logout,
+  refresh,
+  register,
+} from '../use-cases/auth';
 import userRepository from '../repositories/user';
 import prisma from '../db/prisma';
 import { ConflictError, UnauthorizedError } from '../errors';
@@ -10,14 +16,14 @@ const EMAIL = 'service@example.com';
 const PASSWORD = 'correct horse battery';
 const CONTEXT = { userAgent: 'curl/8', ip: '203.0.113.7' };
 
-const register = (email = EMAIL) =>
-  authService.register({ email, password: PASSWORD }, CONTEXT);
+const registerUser = (email = EMAIL) =>
+  register({ email, password: PASSWORD }, CONTEXT);
 
 beforeEach(resetDatabase);
 
-describe('authService.register', () => {
+describe('register', () => {
   it('creates the account and hands out a session', async () => {
-    const session = await register();
+    const session = await registerUser();
 
     expect(session.user.email).toBe(EMAIL);
     expect(session.expiresIn).toBeGreaterThan(0);
@@ -28,7 +34,7 @@ describe('authService.register', () => {
   });
 
   it('never stores the password, only a hash of it', async () => {
-    await register();
+    await registerUser();
 
     const stored = await prisma.user.findUnique({ where: { email: EMAIL } });
 
@@ -37,7 +43,7 @@ describe('authService.register', () => {
   });
 
   it('stores the refresh token hashed, with the client context', async () => {
-    const session = await register();
+    const session = await registerUser();
 
     const stored = await prisma.session.findUnique({
       where: { refreshTokenHash: hashRefreshToken(session.refreshToken) },
@@ -51,31 +57,31 @@ describe('authService.register', () => {
   });
 
   it('rejects an email that is already registered', async () => {
-    await register();
+    await registerUser();
 
-    await expect(register()).rejects.toThrow(ConflictError);
+    await expect(registerUser()).rejects.toThrow(ConflictError);
   });
 
   it('rejects a duplicate that slipped past the up front check', async () => {
-    await register();
+    await registerUser();
 
     // Two requests for one address can both pass the lookup, so the unique
     // constraint is what decides and the loser has to answer the same conflict
     const lookup = spyOn(userRepository, 'findByEmail').mockResolvedValue(null);
 
     try {
-      await expect(register()).rejects.toThrow(ConflictError);
+      await expect(registerUser()).rejects.toThrow(ConflictError);
     } finally {
       lookup.mockRestore();
     }
   });
 });
 
-describe('authService.login', () => {
+describe('login', () => {
   it('starts a new session for the right password', async () => {
-    const registered = await register();
+    const registered = await registerUser();
 
-    const session = await authService.login(
+    const session = await login(
       { email: EMAIL, password: PASSWORD },
       CONTEXT,
     );
@@ -86,9 +92,9 @@ describe('authService.login', () => {
   });
 
   it('keeps the password hash out of the session it answers with', async () => {
-    await register();
+    await registerUser();
 
-    const session = await authService.login(
+    const session = await login(
       { email: EMAIL, password: PASSWORD },
       CONTEXT,
     );
@@ -97,9 +103,9 @@ describe('authService.login', () => {
   });
 
   it('rejects a wrong password', async () => {
-    await register();
+    await registerUser();
 
-    const attempt = authService.login(
+    const attempt = login(
       { email: EMAIL, password: 'wrong password entirely' },
       CONTEXT,
     );
@@ -108,7 +114,7 @@ describe('authService.login', () => {
   });
 
   it('rejects an unknown email without starting a session', async () => {
-    const attempt = authService.login(
+    const attempt = login(
       { email: 'nobody@example.com', password: PASSWORD },
       CONTEXT,
     );
@@ -118,18 +124,16 @@ describe('authService.login', () => {
   });
 
   it('verifies a decoy hash when the email is unknown', async () => {
-    await register();
+    await registerUser();
 
     // Both paths hash a password, so the timing cannot be read as an answer
     const known = Bun.nanoseconds();
-    await authService
-      .login({ email: EMAIL, password: 'wrong password entirely' }, CONTEXT)
+    await login({ email: EMAIL, password: 'wrong password entirely' }, CONTEXT)
       .catch(() => {});
     const knownCost = Bun.nanoseconds() - known;
 
     const unknown = Bun.nanoseconds();
-    await authService
-      .login({ email: 'nobody@example.com', password: PASSWORD }, CONTEXT)
+    await login({ email: 'nobody@example.com', password: PASSWORD }, CONTEXT)
       .catch(() => {});
     const unknownCost = Bun.nanoseconds() - unknown;
 
@@ -138,11 +142,11 @@ describe('authService.login', () => {
   });
 });
 
-describe('authService.refresh', () => {
+describe('refresh', () => {
   it('hands out a new pair and retires the token it was given', async () => {
-    const session = await register();
+    const session = await registerUser();
 
-    const refreshed = await authService.refresh(session.refreshToken, CONTEXT);
+    const refreshed = await refresh(session.refreshToken, CONTEXT);
 
     expect(refreshed.refreshToken).not.toBe(session.refreshToken);
     const old = await prisma.session.findUnique({
@@ -152,10 +156,10 @@ describe('authService.refresh', () => {
   });
 
   it('ends every session when a retired token comes back', async () => {
-    const session = await register();
-    await authService.refresh(session.refreshToken, CONTEXT);
+    const session = await registerUser();
+    await refresh(session.refreshToken, CONTEXT);
 
-    const replay = authService.refresh(session.refreshToken, CONTEXT);
+    const replay = refresh(session.refreshToken, CONTEXT);
 
     await expect(replay).rejects.toThrow(UnauthorizedError);
     // A replayed token means it leaked, so the whole chain is dropped
@@ -164,29 +168,29 @@ describe('authService.refresh', () => {
   });
 
   it('rejects a token it never issued', async () => {
-    const attempt = authService.refresh('a token from nowhere', CONTEXT);
+    const attempt = refresh('a token from nowhere', CONTEXT);
 
     await expect(attempt).rejects.toThrow(UnauthorizedError);
   });
 
   it('rejects a session that has run out', async () => {
-    const session = await register();
+    const session = await registerUser();
     await prisma.session.update({
       where: { refreshTokenHash: hashRefreshToken(session.refreshToken) },
       data: { expiresAt: new Date('2020-01-01') },
     });
 
-    const attempt = authService.refresh(session.refreshToken, CONTEXT);
+    const attempt = refresh(session.refreshToken, CONTEXT);
 
     await expect(attempt).rejects.toThrow('Refresh token expired');
   });
 });
 
-describe('authService.logout', () => {
+describe('logout', () => {
   it('ends the session behind the refresh token', async () => {
-    const session = await register();
+    const session = await registerUser();
 
-    await authService.logout(session.refreshToken);
+    await logout(session.refreshToken);
 
     const stored = await prisma.session.findUnique({
       where: { refreshTokenHash: hashRefreshToken(session.refreshToken) },
@@ -195,10 +199,10 @@ describe('authService.logout', () => {
   });
 
   it('leaves the other sessions of the account alone', async () => {
-    const first = await register();
-    await authService.login({ email: EMAIL, password: PASSWORD }, CONTEXT);
+    const first = await registerUser();
+    await login({ email: EMAIL, password: PASSWORD }, CONTEXT);
 
-    await authService.logout(first.refreshToken);
+    await logout(first.refreshToken);
 
     expect(await prisma.session.count({ where: { revokedAt: null } })).toBe(1);
   });
@@ -206,19 +210,19 @@ describe('authService.logout', () => {
   it('says nothing about a token it does not know', async () => {
     // The caller is logged out either way, so an unknown token is not an error
     await expect(
-      authService.logout('a token from nowhere'),
+      logout('a token from nowhere'),
     ).resolves.toBeUndefined();
   });
 
   it('does not move the timestamp of an already retired session', async () => {
-    const session = await register();
-    await authService.logout(session.refreshToken);
+    const session = await registerUser();
+    await logout(session.refreshToken);
     const hash = hashRefreshToken(session.refreshToken);
     const { revokedAt } = (await prisma.session.findUnique({
       where: { refreshTokenHash: hash },
     }))!;
 
-    await authService.logout(session.refreshToken);
+    await logout(session.refreshToken);
 
     const after = await prisma.session.findUnique({
       where: { refreshTokenHash: hash },
@@ -227,17 +231,17 @@ describe('authService.logout', () => {
   });
 });
 
-describe('authService.findCurrentUser', () => {
+describe('findCurrentUser', () => {
   it('answers with the account behind the id, hash excluded', async () => {
-    const session = await register();
+    const session = await registerUser();
 
-    const user = await authService.findCurrentUser(session.user.id);
+    const user = await findCurrentUser(session.user.id);
 
     expect(user).toEqual(session.user);
     expect(user).not.toHaveProperty('passwordHash');
   });
 
   it('answers null for an id it does not know', async () => {
-    expect(await authService.findCurrentUser('nobody')).toBeNull();
+    expect(await findCurrentUser('nobody')).toBeNull();
   });
 });

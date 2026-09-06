@@ -1,4 +1,10 @@
-import authService from '../services/auth';
+import {
+  findCurrentUser,
+  login,
+  logout,
+  refresh,
+  register,
+} from '../use-cases/auth';
 import { UnauthorizedError } from '../errors';
 import { currentUser } from '../middlewares/auth';
 import { toUserResponse, toSessionResponse } from '../mappers/auth';
@@ -12,19 +18,19 @@ const sessionContext = (req: Request) => ({
 
 const authController = {
   async register(req: Request, res: Response) {
-    const session = await authService.register(req.body, sessionContext(req));
+    const session = await register(req.body, sessionContext(req));
 
     res.status(201).json(toSessionResponse(session));
   },
 
   async login(req: Request, res: Response) {
-    const session = await authService.login(req.body, sessionContext(req));
+    const session = await login(req.body, sessionContext(req));
 
     res.json(toSessionResponse(session));
   },
 
   async refresh(req: Request, res: Response) {
-    const session = await authService.refresh(
+    const session = await refresh(
       req.body.refreshToken,
       sessionContext(req),
     );
@@ -33,13 +39,13 @@ const authController = {
   },
 
   async logout(req: Request, res: Response) {
-    await authService.logout(req.body.refreshToken);
+    await logout(req.body.refreshToken);
 
     res.json({ message: 'Logged out successfully' });
   },
 
   async me(req: Request, res: Response) {
-    const user = await authService.findCurrentUser(currentUser(req).id);
+    const user = await findCurrentUser(currentUser(req).id);
 
     // The token verifies but the account behind it is gone
     if (!user) throw new UnauthorizedError();
