@@ -47,10 +47,24 @@ class UniqueConstraintError extends ConflictError {
   }
 }
 
+class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, 403);
+  }
+}
+
+class QuotaExceededError extends ForbiddenError {
+  constructor(message = 'Active link quota exceeded') {
+    super(message);
+  }
+}
+
 export {
   AppError,
   BadRequestError,
   UnauthorizedError,
+  ForbiddenError,
+  QuotaExceededError,
   NotFoundError,
   ConflictError,
   UniqueConstraintError,

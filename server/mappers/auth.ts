@@ -14,6 +14,14 @@ type IssuedSession = {
 const toUserResponse = (user: User) => ({
   id: user.id,
   email: user.email,
+  role: user.role
+    ? {
+        id: user.role.id,
+        name: user.role.name,
+        description: user.role.description,
+        maxActiveLinks: user.role.maxActiveLinks,
+      }
+    : null,
   createdAt: user.createdAt,
 });
 

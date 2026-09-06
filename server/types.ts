@@ -36,10 +36,39 @@ type NewUrl = {
   userId: string;
 };
 
+type Role = {
+  id: string;
+  name: string;
+  description: string | null;
+  maxActiveLinks: number | null;
+  createdAt: Date;
+};
+
+type RoleSummary = {
+  id: string;
+  name: string;
+  description: string | null;
+  maxActiveLinks: number | null;
+};
+
+type NewRole = {
+  name: string;
+  description?: string | null;
+  maxActiveLinks?: number | null;
+};
+
+type UpdateRole = {
+  name?: string;
+  description?: string | null;
+  maxActiveLinks?: number | null;
+};
+
 /** The user as the API is allowed to see it, i.e. without the password hash */
 type User = {
   id: string;
   email: string;
+  roleId: string | null;
+  role?: RoleSummary | null;
   createdAt: Date;
 };
 
@@ -48,6 +77,7 @@ type UserWithPassword = User & { passwordHash: string };
 type NewUser = {
   email: string;
   passwordHash: string;
+  roleId?: string | null;
 };
 
 type Session = {
@@ -86,6 +116,7 @@ type UrlRepository = {
     userId: string,
   ): Promise<UrlWithClickEvents | null>;
   deleteOwned(shortCode: string, userId: string): Promise<number>;
+  countActiveByUser(userId: string): Promise<number>;
 };
 
 type UserRepository = {
@@ -93,6 +124,16 @@ type UserRepository = {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   findByEmailWithPassword(email: string): Promise<UserWithPassword | null>;
+  updateRole(userId: string, roleId: string | null): Promise<User>;
+};
+
+type RoleRepository = {
+  findAll(): Promise<Role[]>;
+  findById(id: string): Promise<Role | null>;
+  findByName(name: string): Promise<Role | null>;
+  create(role: NewRole): Promise<Role>;
+  update(id: string, role: UpdateRole): Promise<Role>;
+  delete(id: string): Promise<number>;
 };
 
 type SessionRepository = {
@@ -115,6 +156,10 @@ export type {
   User,
   UserWithPassword,
   NewUser,
+  Role,
+  RoleSummary,
+  NewRole,
+  UpdateRole,
   Session,
   NewSession,
   UrlWithClickCount,
@@ -122,5 +167,6 @@ export type {
   UrlRepository,
   ClickRepository,
   UserRepository,
+  RoleRepository,
   SessionRepository,
 };

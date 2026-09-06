@@ -7,12 +7,29 @@ import type { UserRepository } from '../types';
 const publicFields = {
   id: true,
   email: true,
+  roleId: true,
+  role: {
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      maxActiveLinks: true,
+    },
+  },
   createdAt: true,
 };
 
 const userRepository: UserRepository = {
-  async create({ email, passwordHash }) {
-    const data = { email, passwordHash };
+  async create({ email, passwordHash, roleId }) {
+    let assignedRoleId = roleId;
+    if (assignedRoleId === undefined) {
+      const defaultRole = await prisma.role.findUnique({
+        where: { name: 'USER' },
+      });
+      if (defaultRole) assignedRoleId = defaultRole.id;
+    }
+
+    const data = { email, passwordHash, roleId: assignedRoleId };
 
     try {
       return await prisma.user.create({ data, select: publicFields });
@@ -43,6 +60,14 @@ const userRepository: UserRepository = {
     return await prisma.user.findUnique({
       where: { email },
       select: { ...publicFields, passwordHash: true },
+    });
+  },
+
+  async updateRole(userId, roleId) {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { roleId },
+      select: publicFields,
     });
   },
 };

@@ -30,6 +30,7 @@ describe('register', () => {
     expect(verifyAccessToken(session.accessToken)).toEqual({
       sub: session.user.id,
       email: EMAIL,
+      role: 'USER',
     });
   });
 

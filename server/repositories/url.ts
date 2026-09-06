@@ -59,6 +59,19 @@ const urlRepository: UrlRepository = {
 
     return count;
   },
+
+  async countActiveByUser(userId) {
+    const now = new Date();
+    return await prisma.url.count({
+      where: {
+        userId,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+    });
+  },
 };
 
 export default urlRepository;

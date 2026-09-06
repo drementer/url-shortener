@@ -31,7 +31,11 @@ const startSession = async (user: User, context: SessionContext) => {
 
   return {
     user,
-    accessToken: createAccessToken({ sub: user.id, email: user.email }),
+    accessToken: createAccessToken({
+      sub: user.id,
+      email: user.email,
+      ...(user.role?.name ? { role: user.role.name } : {}),
+    }),
     refreshToken,
     expiresIn: env.ACCESS_TOKEN_TTL_SECONDS,
   };

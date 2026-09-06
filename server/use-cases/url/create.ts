@@ -1,7 +1,18 @@
 import urlRepository from '../../repositories/url';
+import userRepository from '../../repositories/user';
 import { resolveExpiry } from '../../domain/url';
+import {
+  canCreateLink,
+  formatQuotaExceededMessage,
+  DEFAULT_ROLE_NAME,
+  DEFAULT_USER_MAX_ACTIVE_LINKS,
+} from '../../domain/role';
 import { createShortCode } from '../../utils/short-code';
-import { ConflictError, UniqueConstraintError } from '../../errors';
+import {
+  ConflictError,
+  QuotaExceededError,
+  UniqueConstraintError,
+} from '../../errors';
 import { SLUG_TAKEN } from './messages';
 import type { NewUrl } from '../../types';
 
@@ -61,6 +72,22 @@ const createUrl = async (
   { url, customSlug, expiresIn }: CreateUrlCommand,
   userId: string,
 ) => {
+  const user = await userRepository.findById(userId);
+  const roleName = user?.role?.name ?? DEFAULT_ROLE_NAME;
+  const maxActiveLinks =
+    user?.role !== undefined
+      ? user?.role?.maxActiveLinks
+      : DEFAULT_USER_MAX_ACTIVE_LINKS;
+
+  if (maxActiveLinks !== null && maxActiveLinks !== undefined) {
+    const activeCount = await urlRepository.countActiveByUser(userId);
+    if (!canCreateLink(activeCount, maxActiveLinks)) {
+      throw new QuotaExceededError(
+        formatQuotaExceededMessage(roleName, maxActiveLinks),
+      );
+    }
+  }
+
   const row = { originalUrl: url, expiresAt: resolveExpiry(expiresIn), userId };
 
   if (!customSlug) return await allocateShortCode(row);
