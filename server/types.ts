@@ -107,9 +107,14 @@ type NewClick = {
  * belonging to someone else is indistinguishable from one that does not exist.
  * findByShortCode is the exception: the public redirect has no owner.
  */
+type UrlQuotaOptions = {
+  maxActiveLinks?: number | null;
+  roleName?: string;
+};
+
 type UrlRepository = {
   findAllByUser(userId: string): Promise<UrlWithClickCount[]>;
-  create(url: NewUrl): Promise<Url>;
+  create(url: NewUrl, quota?: UrlQuotaOptions): Promise<Url>;
   findByShortCode(shortCode: string): Promise<Url | null>;
   findOwnedWithClicks(
     shortCode: string,

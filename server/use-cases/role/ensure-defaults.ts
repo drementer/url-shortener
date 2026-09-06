@@ -1,4 +1,5 @@
 import roleRepository from '../../repositories/role';
+import { UniqueConstraintError } from '../../errors';
 import {
   DEFAULT_ROLE_NAME,
   EDITOR_ROLE_NAME,
@@ -27,9 +28,13 @@ const DEFAULT_ROLES = [
 
 const ensureDefaultRoles = async () => {
   for (const role of DEFAULT_ROLES) {
-    const existing = await roleRepository.findByName(role.name);
-    if (!existing) {
-      await roleRepository.create(role);
+    try {
+      const existing = await roleRepository.findByName(role.name);
+      if (!existing) {
+        await roleRepository.create(role);
+      }
+    } catch (error) {
+      if (!(error instanceof UniqueConstraintError)) throw error;
     }
   }
 };

@@ -108,4 +108,50 @@ describe('active link quota enforcement', () => {
     );
     expect(replacement.shortCode).toBeString();
   });
+
+  it('enforces default 5 quota when a user has no assigned role (role is null)', async () => {
+    const user = await createUser('norole@example.com', 'USER');
+    await prisma.user.update({ where: { id: user.id }, data: { roleId: null } });
+
+    for (let i = 1; i <= 5; i++) {
+      const url = await createUrl(
+        { url: `https://example.com/no-role-${i}` },
+        user.id,
+      );
+      expect(url.shortCode).toBeString();
+    }
+
+    const sixthAttempt = createUrl(
+      { url: 'https://example.com/no-role-6' },
+      user.id,
+    );
+    await expect(sixthAttempt).rejects.toThrow(QuotaExceededError);
+  });
+
+  it('prevents quota race condition during concurrent link creations', async () => {
+    const user = await createUser('race-tester@example.com', 'USER');
+
+    // Create 4 active links so only 1 slot remains under the quota of 5
+    for (let i = 1; i <= 4; i++) {
+      await createUrl({ url: `https://example.com/race-slot-${i}` }, user.id);
+    }
+
+    // Fire 2 creations concurrently
+    const results = await Promise.allSettled([
+      createUrl({ url: 'https://example.com/race-candidate-1' }, user.id),
+      createUrl({ url: 'https://example.com/race-candidate-2' }, user.id),
+    ]);
+
+    const fulfilled = results.filter((r) => r.status === 'fulfilled');
+    const rejected = results.filter((r) => r.status === 'rejected');
+
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(
+      QuotaExceededError,
+    );
+
+    const totalCount = await prisma.url.count({ where: { userId: user.id } });
+    expect(totalCount).toBe(5);
+  });
 });

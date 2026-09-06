@@ -1,5 +1,6 @@
 import roleRepository from '../../repositories/role';
-import { NotFoundError, ConflictError } from '../../errors';
+import { ADMIN_ROLE_NAME } from '../../domain/role';
+import { NotFoundError, ConflictError, BadRequestError } from '../../errors';
 
 type UpdateRoleCommand = {
   name?: string;
@@ -17,6 +18,10 @@ const updateRole = async (id: string, command: UpdateRoleCommand) => {
 
   if (command.name !== undefined) {
     const normalizedName = command.name.trim().toUpperCase();
+    if (existing.name === ADMIN_ROLE_NAME && normalizedName !== ADMIN_ROLE_NAME) {
+      throw new BadRequestError('Cannot rename the built-in ADMIN role');
+    }
+
     if (normalizedName !== existing.name) {
       const duplicate = await roleRepository.findByName(normalizedName);
       if (duplicate) {

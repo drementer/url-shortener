@@ -32,14 +32,20 @@ type UnnamedUrl = Omit<NewUrl, 'shortCode' | 'customSlug'>;
  * already taken. A collision here is a coincidence rather than the user's
  * doing, so it is retried instead of reported.
  */
-const allocateShortCode = async (url: UnnamedUrl) => {
+const allocateShortCode = async (
+  url: UnnamedUrl,
+  quota?: { maxActiveLinks?: number | null; roleName?: string },
+) => {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      return await urlRepository.create({
-        ...url,
-        shortCode: createShortCode(),
-        customSlug: null,
-      });
+      return await urlRepository.create(
+        {
+          ...url,
+          shortCode: createShortCode(),
+          customSlug: null,
+        },
+        quota,
+      );
     } catch (error) {
       if (!(error instanceof UniqueConstraintError)) throw error;
     }
@@ -52,14 +58,21 @@ const allocateShortCode = async (url: UnnamedUrl) => {
  * Writes the row under the code the user picked. Retrying would reuse the same
  * value, so a collision is reported instead.
  */
-const claimSlug = async (url: UnnamedUrl, slug: string) => {
+const claimSlug = async (
+  url: UnnamedUrl,
+  slug: string,
+  quota?: { maxActiveLinks?: number | null; roleName?: string },
+) => {
   try {
     // customSlug is kept alongside shortCode to record that the user chose it
-    return await urlRepository.create({
-      ...url,
-      shortCode: slug,
-      customSlug: slug,
-    });
+    return await urlRepository.create(
+      {
+        ...url,
+        shortCode: slug,
+        customSlug: slug,
+      },
+      quota,
+    );
   } catch (error) {
     if (!(error instanceof UniqueConstraintError)) throw error;
 
@@ -75,28 +88,22 @@ const createUrl = async (
   const user = await userRepository.findById(userId);
   const roleName = user?.role?.name ?? DEFAULT_ROLE_NAME;
   const maxActiveLinks =
-    user?.role !== undefined
-      ? user?.role?.maxActiveLinks
+    user?.role != null
+      ? user.role.maxActiveLinks
       : DEFAULT_USER_MAX_ACTIVE_LINKS;
 
-  if (maxActiveLinks !== null && maxActiveLinks !== undefined) {
-    const activeCount = await urlRepository.countActiveByUser(userId);
-    if (!canCreateLink(activeCount, maxActiveLinks)) {
-      throw new QuotaExceededError(
-        formatQuotaExceededMessage(roleName, maxActiveLinks),
-      );
-    }
-  }
-
+  const quota = { maxActiveLinks, roleName };
   const row = { originalUrl: url, expiresAt: resolveExpiry(expiresIn), userId };
 
-  if (!customSlug) return await allocateShortCode(row);
+  if (!customSlug) {
+    return await allocateShortCode(row, quota);
+  }
 
   // Early check so a taken slug fails before hitting the unique constraint
   const existingUrl = await urlRepository.findByShortCode(customSlug);
   if (existingUrl) throw new ConflictError(SLUG_TAKEN);
 
-  return await claimSlug(row, customSlug);
+  return await claimSlug(row, customSlug, quota);
 };
 
 export { createUrl };

@@ -150,4 +150,50 @@ describe('/api/roles access control', () => {
     const err = await eleventhRes.json();
     expect(err.error).toContain('Active link quota exceeded');
   });
+
+  it('rejects attempt to rename the built-in ADMIN role with 400', async () => {
+    const admin = await createUser('admin-rename@example.com', 'ADMIN');
+    const adminToken = getAuthToken(admin, 'ADMIN');
+    const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+
+    const renameRes = await fetch(`${baseUrl}/api/roles/${adminRole!.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${adminToken}`,
+      },
+      body: JSON.stringify({ name: 'SUPERADMIN' }),
+    });
+
+    expect(renameRes.status).toBe(400);
+    const body = await renameRes.json();
+    expect(body.error).toBe('Cannot rename the built-in ADMIN role');
+  });
+
+  it('rejects stale token when an admin user is demoted to a regular role', async () => {
+    const superAdmin = await createUser('superadmin@example.com', 'ADMIN');
+    const superAdminToken = getAuthToken(superAdmin, 'ADMIN');
+
+    const targetUser = await createUser('demotee@example.com', 'ADMIN');
+    const staleAdminToken = getAuthToken(targetUser, 'ADMIN');
+
+    const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+
+    // Demote targetUser to USER
+    const demoteRes = await fetch(`${baseUrl}/api/roles/users/${targetUser.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${superAdminToken}`,
+      },
+      body: JSON.stringify({ roleId: userRole!.id }),
+    });
+    expect(demoteRes.status).toBe(200);
+
+    // Attempting to access admin-only endpoint with stale token must be rejected with 403
+    const forbiddenRes = await fetch(`${baseUrl}/api/roles`, {
+      headers: { authorization: `Bearer ${staleAdminToken}` },
+    });
+    expect(forbiddenRes.status).toBe(403);
+  });
 });

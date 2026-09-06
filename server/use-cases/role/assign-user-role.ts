@@ -1,5 +1,6 @@
 import userRepository from '../../repositories/user';
 import roleRepository from '../../repositories/role';
+import sessionRepository from '../../repositories/session';
 import { NotFoundError } from '../../errors';
 
 const assignUserRole = async (userId: string, roleId: string | null) => {
@@ -15,7 +16,9 @@ const assignUserRole = async (userId: string, roleId: string | null) => {
     }
   }
 
-  return await userRepository.updateRole(userId, roleId);
+  const updatedUser = await userRepository.updateRole(userId, roleId);
+  await sessionRepository.revokeAllForUser(userId);
+  return updatedUser;
 };
 
 export { assignUserRole };

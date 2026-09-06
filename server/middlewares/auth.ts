@@ -1,5 +1,6 @@
 import { UnauthorizedError, ForbiddenError } from '../errors';
 import { verifyAccessToken } from '../utils/tokens';
+import userRepository from '../repositories/user';
 import type { Request, Response, NextFunction } from 'express';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -37,14 +38,21 @@ const currentUser = (req: Request) => {
 
 /**
  * Requires the authenticated caller to have one of the specified roles.
+ * Verifies against the database so a demoted account cannot ride on a stale token claim.
  */
 const requireRole = (...allowedRoles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = currentUser(req);
-    if (!user.role || !allowedRoles.includes(user.role)) {
-      throw new ForbiddenError('Insufficient permissions');
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = currentUser(req);
+      const freshUser = await userRepository.findById(user.id);
+      const currentRole = freshUser?.role?.name;
+      if (!currentRole || !allowedRoles.includes(currentRole)) {
+        throw new ForbiddenError('Insufficient permissions');
+      }
+      next();
+    } catch (error) {
+      next(error);
     }
-    next();
   };
 };
 
