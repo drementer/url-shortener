@@ -1,0 +1,16 @@
+url-shortener
+Copyright (C) 2026 drementer
+
+Licensed under the GNU Affero General Public License, version 3 or later.
+See LICENSE for the full text and ADDITIONAL_TERMS.md for the attribution
+requirement added under section 7(b).
+
+Every deployment of this software, paid or free, modified or not, must display
+the following attribution somewhere a user can reach without an account
+(footer, about page, or equivalent):
+
+    Based on url-shortener - https://github.com/drementer/url-shortener
+
+Note for anyone rebuilding the client: this notice is the canonical wording.
+The interface must render it; removing or replacing it is a license violation,
+not a design decision.

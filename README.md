@@ -320,4 +320,20 @@ request.
 
 ## License
 
-ISC
+Copyright (C) 2026 drementer
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU Affero General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. See [LICENSE](LICENSE) for the full text.
+
+Two consequences worth stating plainly:
+
+- **Running it as a network service counts as distribution.** Anyone who offers
+  this software over a network, paid or free, must offer its complete source
+  code — including their own modifications — to the users of that service, under
+  this same license.
+- **Attribution is required.** Under section 7(b) of the license, every
+  deployment must keep a visible credit to the upstream project. The exact
+  wording is in [NOTICE](NOTICE), the term itself in
+  [ADDITIONAL_TERMS.md](ADDITIONAL_TERMS.md).
