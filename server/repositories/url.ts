@@ -1,4 +1,6 @@
 import prisma from '../db/prisma';
+import { UniqueConstraintError } from '../errors';
+import { isUniqueViolation } from '../utils/prisma-error';
 import type { UrlRepository } from '../types';
 
 const urlRepository: UrlRepository = {
@@ -24,7 +26,14 @@ const urlRepository: UrlRepository = {
       userId,
     };
 
-    return await prisma.url.create({ data });
+    try {
+      return await prisma.url.create({ data });
+    } catch (error) {
+      // Prisma's constraint code stops here, the caller only sees the collision
+      if (isUniqueViolation(error)) throw new UniqueConstraintError();
+
+      throw error;
+    }
   },
 
   async findByShortCode(shortCode) {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CreateUrlCommand } from '../services/url';
+import type { CreateUrlCommand } from '../use-cases/url';
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]+$/;
 const RESERVED_SLUGS = ['api', '404', 'expired', 'stats'];

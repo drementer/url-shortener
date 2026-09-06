@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Credentials } from '../services/auth';
+import type { Credentials } from '../use-cases/auth';
 
 const MIN_PASSWORD_LENGTH = 8;
 // Bounded because the whole password is fed to scrypt on every login attempt

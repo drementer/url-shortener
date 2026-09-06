@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import userRepository from '../repositories/user';
-import { isUniqueViolation } from '../utils/prisma-error';
+import { UniqueConstraintError } from '../errors';
 import { resetDatabase } from './helpers';
 
 const EMAIL = 'user@example.com';
@@ -20,15 +20,13 @@ describe('userRepository.create', () => {
     expect(user.email).toBe(EMAIL);
   });
 
-  it('reports a taken email as a unique violation', async () => {
+  it('reports a taken email as a domain error', async () => {
     await userRepository.create({ email: EMAIL, passwordHash: HASH });
 
-    // The service turns exactly this into a 409, so the code has to survive
-    const error = await userRepository
-      .create({ email: EMAIL, passwordHash: HASH })
-      .catch((error: unknown) => error);
+    // Prisma's own code is translated here, so no use case has to know it
+    const attempt = userRepository.create({ email: EMAIL, passwordHash: HASH });
 
-    expect(isUniqueViolation(error)).toBe(true);
+    await expect(attempt).rejects.toThrow(UniqueConstraintError);
   });
 });
 

@@ -36,10 +36,22 @@ class ConflictError extends AppError {
   }
 }
 
+/**
+ * A uniqueness rule of the storage was violated. Repositories raise it in place
+ * of the driver's own error, so a use case can react to a collision without
+ * knowing which database reported it or how.
+ */
+class UniqueConstraintError extends ConflictError {
+  constructor(message = 'Already exists') {
+    super(message);
+  }
+}
+
 export {
   AppError,
   BadRequestError,
   UnauthorizedError,
   NotFoundError,
   ConflictError,
+  UniqueConstraintError,
 };

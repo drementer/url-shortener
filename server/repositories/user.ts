@@ -1,4 +1,6 @@
 import prisma from '../db/prisma';
+import { UniqueConstraintError } from '../errors';
+import { isUniqueViolation } from '../utils/prisma-error';
 import type { UserRepository } from '../types';
 
 /** Selecting explicitly keeps passwordHash from leaking into a response */
@@ -12,7 +14,14 @@ const userRepository: UserRepository = {
   async create({ email, passwordHash }) {
     const data = { email, passwordHash };
 
-    return await prisma.user.create({ data, select: publicFields });
+    try {
+      return await prisma.user.create({ data, select: publicFields });
+    } catch (error) {
+      // Prisma's constraint code stops here, the caller only sees the collision
+      if (isUniqueViolation(error)) throw new UniqueConstraintError();
+
+      throw error;
+    }
   },
 
   async findById(id) {
