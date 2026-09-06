@@ -80,6 +80,7 @@ describe('POST /api/auth/register', () => {
       'createdAt',
       'email',
       'id',
+      'role',
     ]);
     expect(session.expiresIn).toBeGreaterThan(0);
   });

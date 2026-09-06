@@ -16,7 +16,13 @@ describe('userRepository.create', () => {
     });
 
     // Selected explicitly, so the hash cannot ride along into a response
-    expect(Object.keys(user).sort()).toEqual(['createdAt', 'email', 'id']);
+    expect(Object.keys(user).sort()).toEqual([
+      'createdAt',
+      'email',
+      'id',
+      'role',
+      'roleId',
+    ]);
     expect(user.email).toBe(EMAIL);
   });
 
@@ -82,6 +88,8 @@ describe('userRepository.findByEmailWithPassword', () => {
       'email',
       'id',
       'passwordHash',
+      'role',
+      'roleId',
     ]);
   });
 

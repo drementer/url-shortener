@@ -7,6 +7,7 @@ const REFRESH_TOKEN_BYTES = 48;
 type AccessTokenPayload = {
   sub: string;
   email: string;
+  role?: string;
 };
 
 const createAccessToken = (payload: AccessTokenPayload) =>
@@ -19,10 +20,14 @@ const verifyAccessToken = (token: string): AccessTokenPayload | null => {
     const payload = jwt.verify(token, env.JWT_ACCESS_SECRET);
     if (typeof payload === 'string') return null;
 
-    const { sub, email } = payload;
+    const { sub, email, role } = payload;
     if (typeof sub !== 'string' || typeof email !== 'string') return null;
 
-    return { sub, email };
+    return {
+      sub,
+      email,
+      ...(typeof role === 'string' ? { role } : {}),
+    };
   } catch {
     return null;
   }

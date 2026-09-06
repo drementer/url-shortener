@@ -1,5 +1,6 @@
-import { UnauthorizedError } from '../errors';
+import { UnauthorizedError, ForbiddenError } from '../errors';
 import { verifyAccessToken } from '../utils/tokens';
+import userRepository from '../repositories/user';
 import type { Request, Response, NextFunction } from 'express';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -17,7 +18,11 @@ const requireAuth = (req: Request, res: Response, next: NextFunction) => {
 
   if (!payload) throw new UnauthorizedError('Invalid or expired token');
 
-  req.user = { id: payload.sub, email: payload.email };
+  req.user = {
+    id: payload.sub,
+    email: payload.email,
+    ...(payload.role ? { role: payload.role } : {}),
+  };
   next();
 };
 
@@ -31,4 +36,24 @@ const currentUser = (req: Request) => {
   return req.user;
 };
 
-export { requireAuth, currentUser };
+/**
+ * Requires the authenticated caller to have one of the specified roles.
+ * Verifies against the database so a demoted account cannot ride on a stale token claim.
+ */
+const requireRole = (...allowedRoles: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = currentUser(req);
+      const freshUser = await userRepository.findById(user.id);
+      const currentRole = freshUser?.role?.name;
+      if (!currentRole || !allowedRoles.includes(currentRole)) {
+        throw new ForbiddenError('Insufficient permissions');
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};
+
+export { requireAuth, currentUser, requireRole };

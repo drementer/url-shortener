@@ -20,6 +20,8 @@ tags:
     description: Account and session endpoints
   - name: URLs
     description: URL management endpoints
+  - name: Roles
+    description: Role and quota management endpoints (Admin only)
   - name: Redirect
     description: URL redirection endpoint
 
@@ -308,6 +310,14 @@ paths:
                     error: expiresIn must be a number of hours
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Active link quota reached for the user's role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Active link quota exceeded (maximum 10 active links allowed for role EDITOR)
         '409':
           description: The requested custom slug is already taken
           content:
@@ -418,7 +428,194 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: Internal server error
+  /api/roles:
+    get:
+      summary: List All Roles
+      description: Retrieve all defined user roles and their link quotas. Requires ADMIN role.
+      tags: [Roles]
+      responses:
+        '200':
+          description: Successfully retrieved all roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      summary: Create Role
+      description: Define a new role with custom active link quota. Requires ADMIN role.
+      tags: [Roles]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Name must be at least 2 characters
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: A role with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Role with name 'VIP' already exists
+
+  /api/roles/{id}:
+    get:
+      summary: Get Role by ID
+      description: Retrieve details of a specific role by its ID. Requires ADMIN role.
+      tags: [Roles]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The role ID
+      responses:
+        '200':
+          description: Role details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Role not found
+
+    patch:
+      summary: Update Role
+      description: Update the name, description, or maxActiveLinks quota of an existing role. Requires ADMIN role.
+      tags: [Roles]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The role ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRoleRequest'
+      responses:
+        '200':
+          description: Role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Role not found
+        '409':
+          description: Role name conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/roles/users/{userId}:
+    patch:
+      summary: Assign Role to User
+      description: Promote or change a user's assigned role and active link quota. Requires ADMIN role.
+      tags: [Roles]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+          description: The user ID to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignRoleRequest'
+      responses:
+        '200':
+          description: User role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User or Role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                userNotFound:
+                  summary: User not found
+                  value:
+                    error: User not found
+                roleNotFound:
+                  summary: Role not found
+                  value:
+                    error: Role not found
 
   /{code}:
     get:
@@ -480,6 +677,22 @@ components:
               summary: Token does not verify
               value:
                 error: Invalid or expired token
+
+    Forbidden:
+      description: The caller lacks permissions or quota to perform this action
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            insufficientPermissions:
+              summary: Insufficient permissions
+              value:
+                error: Insufficient permissions
+            quotaExceeded:
+              summary: Active link quota exceeded
+              value:
+                error: Active link quota exceeded (maximum 10 active links allowed for role EDITOR)
 
   schemas:
     Url:
@@ -640,6 +853,10 @@ components:
           type: string
           format: email
           example: user@example.com
+        role:
+          $ref: '#/components/schemas/RoleSummary'
+          nullable: true
+          description: Assigned role and link quota
         createdAt:
           type: string
           format: date-time
@@ -688,3 +905,114 @@ components:
           format: date-time
           description: Health check timestamp
           example: '2025-01-01T12:00:00Z'
+
+    Role:
+      type: object
+      required: [id, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          description: Unique role identifier (CUID)
+          example: clxyzrole123abc
+        name:
+          type: string
+          description: Unique role name
+          example: EDITOR
+        description:
+          type: string
+          nullable: true
+          description: Description of the role and tier
+          example: Editor user with expanded link quota
+        maxActiveLinks:
+          type: integer
+          nullable: true
+          description: Maximum number of concurrently active links (null represents unlimited)
+          example: 10
+        createdAt:
+          type: string
+          format: date-time
+          description: Role creation timestamp
+          example: '2026-09-06T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Role update timestamp
+          example: '2026-09-06T12:00:00Z'
+
+    RoleSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: Unique role identifier (CUID)
+          example: clxyzrole123abc
+        name:
+          type: string
+          description: Role name
+          example: EDITOR
+        description:
+          type: string
+          nullable: true
+          description: Description of the role
+          example: Editor user with expanded link quota
+        maxActiveLinks:
+          type: integer
+          nullable: true
+          description: Maximum active links quota (null represents unlimited)
+          example: 10
+
+    CreateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 30
+          description: Role name (stored normalized in uppercase)
+          example: VIP
+        description:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Role description
+          example: VIP tier with expanded quota
+        maxActiveLinks:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Active link quota (null for unlimited)
+          example: 50
+
+    UpdateRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 30
+          description: Updated role name
+          example: VIP_PRO
+        description:
+          type: string
+          nullable: true
+          maxLength: 255
+          description: Updated role description
+          example: Updated VIP tier description
+        maxActiveLinks:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Updated active links quota
+          example: 100
+
+    AssignRoleRequest:
+      type: object
+      required: [roleId]
+      properties:
+        roleId:
+          type: string
+          nullable: true
+          description: ID of the role to assign to the user (null to unassign role)
+          example: clxyzrole123abc

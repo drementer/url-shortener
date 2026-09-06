@@ -5,6 +5,8 @@ import type { User } from '../types';
 const user: User = {
   id: 'user-1',
   email: 'mapped@example.com',
+  roleId: null,
+  role: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
 };
 
@@ -13,6 +15,7 @@ describe('toUserResponse', () => {
     expect(toUserResponse(user)).toEqual({
       id: 'user-1',
       email: 'mapped@example.com',
+      role: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
     });
   });
@@ -22,13 +25,14 @@ describe('toUserResponse', () => {
     const withSecrets = {
       ...user,
       passwordHash: 'scrypt:secret',
-      role: 'admin',
+      extraSecretColumn: 'secret',
     };
 
     expect(Object.keys(toUserResponse(withSecrets)).sort()).toEqual([
       'createdAt',
       'email',
       'id',
+      'role',
     ]);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import app from '../server';
+import prisma from '../db/prisma';
 import { resetDatabase } from './helpers';
 
 let server: Server;
@@ -12,7 +13,7 @@ let clientCount = 0;
 const OFFICE_ADDRESS = '10.3.0.1';
 
 /** Registers an account and hands back its access token */
-const registerToken = async (email: string) => {
+const registerToken = async (email: string, roleName?: string) => {
   const response = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
     headers: {
@@ -23,7 +24,17 @@ const registerToken = async (email: string) => {
     body: JSON.stringify({ email, password: 'correct horse battery' }),
   });
 
-  const { accessToken } = await response.json();
+  const { accessToken, user } = await response.json();
+
+  if (roleName) {
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (role) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { roleId: role.id },
+      });
+    }
+  }
 
   return accessToken as string;
 };
@@ -57,8 +68,8 @@ afterAll(() => {
 
 describe('POST /api/urls rate limit', () => {
   it('counts against the account, not the address it comes from', async () => {
-    const heavy = await registerToken('heavy@example.com');
-    const colleague = await registerToken('colleague@example.com');
+    const heavy = await registerToken('heavy@example.com', 'ADMIN');
+    const colleague = await registerToken('colleague@example.com', 'ADMIN');
 
     // Asserted as an exact boundary, so a quota that regresses is caught too
     for (let attempt = 0; attempt < 10; attempt++) {

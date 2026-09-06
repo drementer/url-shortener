@@ -1,6 +1,7 @@
 import prisma from '../db/prisma';
-import { UniqueConstraintError } from '../errors';
+import { UniqueConstraintError, QuotaExceededError } from '../errors';
 import { isUniqueViolation } from '../utils/prisma-error';
+import { canCreateLink, formatQuotaExceededMessage } from '../domain/role';
 import type { UrlRepository } from '../types';
 
 const urlRepository: UrlRepository = {
@@ -17,7 +18,10 @@ const urlRepository: UrlRepository = {
     }));
   },
 
-  async create({ shortCode, customSlug, originalUrl, expiresAt, userId }) {
+  async create(
+    { shortCode, customSlug, originalUrl, expiresAt, userId },
+    quota,
+  ) {
     const data = {
       shortCode,
       customSlug,
@@ -25,6 +29,32 @@ const urlRepository: UrlRepository = {
       expiresAt,
       userId,
     };
+
+    if (quota?.maxActiveLinks !== null && quota?.maxActiveLinks !== undefined) {
+      return await prisma.$transaction(async (tx) => {
+        const now = new Date();
+        const activeCount = await tx.url.count({
+          where: {
+            userId,
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+        });
+
+        if (!canCreateLink(activeCount, quota.maxActiveLinks!)) {
+          throw new QuotaExceededError(
+            formatQuotaExceededMessage(quota.roleName ?? 'USER', quota.maxActiveLinks!),
+          );
+        }
+
+        try {
+          return await tx.url.create({ data });
+        } catch (error) {
+          if (isUniqueViolation(error)) throw new UniqueConstraintError();
+
+          throw error;
+        }
+      });
+    }
 
     try {
       return await prisma.url.create({ data });
@@ -58,6 +88,19 @@ const urlRepository: UrlRepository = {
     });
 
     return count;
+  },
+
+  async countActiveByUser(userId) {
+    const now = new Date();
+    return await prisma.url.count({
+      where: {
+        userId,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+    });
   },
 };
 
