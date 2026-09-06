@@ -60,11 +60,12 @@ describe('POST /api/urls rate limit', () => {
     const heavy = await registerToken('heavy@example.com');
     const colleague = await registerToken('colleague@example.com');
 
-    // The quota is ten a minute, so the eleventh attempt is the one refused
-    let response = await createLink(heavy);
-    for (let tries = 0; tries < 12 && response.status !== 429; tries++) {
-      response = await createLink(heavy);
+    // Asserted as an exact boundary, so a quota that regresses is caught too
+    for (let attempt = 0; attempt < 10; attempt++) {
+      expect((await createLink(heavy)).status).toBe(201);
     }
+
+    const response = await createLink(heavy);
 
     expect(response.status).toBe(429);
     expect(await response.json()).toEqual({

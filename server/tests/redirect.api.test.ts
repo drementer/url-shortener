@@ -93,6 +93,7 @@ describe('GET /:code', () => {
 
     const response = await visit('expired-link');
 
+    expect(response.status).toBe(302);
     expect(response.headers.get('location')).toBe(
       `${env.CLIENT_URL}/expired/expired-link`,
     );
