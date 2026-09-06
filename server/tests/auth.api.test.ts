@@ -92,7 +92,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('accepts an address that was pasted with a stray space', async () => {
-    const response = await register('  spaced@example.com  ');
+    const response = await register('  Spaced@Example.COM  ');
     const { user } = await response.json();
 
     expect(response.status).toBe(201);
