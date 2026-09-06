@@ -5,9 +5,10 @@ Licensed under the GNU Affero General Public License, version 3 or later.
 See LICENSE for the full text and ADDITIONAL_TERMS.md for the attribution
 requirement added under section 7(b).
 
-Every deployment of this software, paid or free, modified or not, must display
-the following attribution somewhere a user can reach without an account
-(footer, about page, or equivalent):
+If you run this software as a network service with a user-facing interface —
+paid or free, modified or not — you must display the following attribution
+somewhere a user can reach without an account (footer, about page, or
+equivalent):
 
     Based on url-shortener - https://github.com/drementer/url-shortener
 

@@ -329,10 +329,10 @@ later version. See [LICENSE](LICENSE) for the full text.
 
 Two consequences worth stating plainly:
 
-- **Running it as a network service counts as distribution.** Anyone who offers
-  this software over a network, paid or free, must offer its complete source
-  code — including their own modifications — to the users of that service, under
-  this same license.
+- **Modified network deployments have a source-offer requirement.** If you
+  modify this software and offer the modified version over a network, you must
+  offer its Corresponding Source to the users of that service under this
+  license.
 - **Attribution is required.** Under section 7(b) of the license, every
   deployment must keep a visible credit to the upstream project. The exact
   wording is in [NOTICE](NOTICE), the term itself in
