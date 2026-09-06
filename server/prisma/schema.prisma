@@ -12,7 +12,7 @@ datasource db {
 }
 
 model Url {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   shortCode   String    @unique
   originalUrl String
   customSlug  String?   @unique
@@ -29,7 +29,7 @@ model Url {
 }
 
 model Click {
-  id        String   @id @default(cuid())
+  id        String   @id @default(uuid())
   urlId     String
   url       Url      @relation(fields: [urlId], references: [id], onDelete: Cascade)
   userAgent String?
@@ -39,7 +39,7 @@ model Click {
 }
 
 model Role {
-  id             String   @id @default(cuid())
+  id             String   @id @default(uuid())
   name           String   @unique
   description    String?
   maxActiveLinks Int?
@@ -50,7 +50,7 @@ model Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String   @id @default(uuid())
   email        String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
@@ -65,7 +65,7 @@ model User {
 }
 
 model Session {
-  id               String    @id @default(cuid())
+  id               String    @id @default(uuid())
   userId           String
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokenHash String    @unique
