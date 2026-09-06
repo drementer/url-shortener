@@ -21,22 +21,30 @@ describe('credentialsSchema', () => {
     });
   });
 
-  it('lowercases the email', () => {
+  it('lowercases and trims the email', () => {
     const { data } = credentialsSchema.safeParse({
-      email: 'Mixed.Case@Example.COM',
+      email: '  Mixed.Case@Example.COM  ',
       password: PASSWORD,
     });
 
-    // Storage relies on this, otherwise one address could register twice
+    // Storage relies on the casing, otherwise one address registers twice.
+    // The trim happens first, so a pasted address is cleaned, not rejected.
     expect(data?.email).toBe('mixed.case@example.com');
   });
 
-  it('rejects an email with surrounding whitespace', () => {
-    // The .trim() in the schema runs after the email check, never before it,
-    // so a pasted address with a stray space is refused rather than cleaned
-    expect(
-      firstIssue({ email: ' user@example.com ', password: PASSWORD }),
-    ).toBe('A valid email is required');
+  it('rejects an email that is only whitespace', () => {
+    expect(firstIssue({ email: '   ', password: PASSWORD })).toBe(
+      'A valid email is required',
+    );
+  });
+
+  it('rejects a missing or non-string email with the same message', () => {
+    expect(firstIssue({ password: PASSWORD })).toBe(
+      'A valid email is required',
+    );
+    expect(firstIssue({ email: 42, password: PASSWORD })).toBe(
+      'A valid email is required',
+    );
   });
 
   it('rejects a malformed email', () => {

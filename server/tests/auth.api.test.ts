@@ -91,6 +91,14 @@ describe('POST /api/auth/register', () => {
     expect(user.email).toBe('mixed.case@example.com');
   });
 
+  it('accepts an address that was pasted with a stray space', async () => {
+    const response = await register('  spaced@example.com  ');
+    const { user } = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(user.email).toBe('spaced@example.com');
+  });
+
   it('rejects a password below the minimum length', async () => {
     const response = await register('short@example.com', 'short');
 
