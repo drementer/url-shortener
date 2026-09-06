@@ -101,6 +101,11 @@ type SessionRepository = {
   /** Number of sessions actually revoked by the call, so at most one */
   revoke(id: string): Promise<number>;
   revokeAllForUser(userId: string): Promise<unknown>;
+  rotate(
+    oldSessionId: string,
+    userId: string,
+    newSession: NewSession,
+  ): Promise<Session | null>;
 };
 
 type ClickRepository = {

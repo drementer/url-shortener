@@ -184,6 +184,33 @@ describe('refresh', () => {
 
     await expect(attempt).rejects.toThrow('Refresh token expired');
   });
+
+  it('contains replay and prevents any new session from surviving when concurrent refreshes race', async () => {
+    const session = await registerUser('race-use-case@example.com');
+
+    const [first, second] = await Promise.allSettled([
+      refresh(session.refreshToken, CONTEXT),
+      refresh(session.refreshToken, CONTEXT),
+    ]);
+
+    const successes = [first, second].filter((r) => r.status === 'fulfilled');
+    const failures = [first, second].filter((r) => r.status === 'rejected');
+
+    expect(successes).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect((failures[0] as PromiseRejectedResult).reason).toBeInstanceOf(
+      UnauthorizedError,
+    );
+
+    // Replay was detected: all sessions must be revoked; no replacement can slip through
+    const user = await prisma.user.findUnique({
+      where: { email: 'race-use-case@example.com' },
+    });
+    const live = await prisma.session.count({
+      where: { userId: user!.id, revokedAt: null },
+    });
+    expect(live).toBe(0);
+  });
 });
 
 describe('logout', () => {
