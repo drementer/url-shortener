@@ -1,5 +1,6 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
+import { describe, expect, it, beforeEach, spyOn } from 'bun:test';
 import urlService from '../services/url';
+import urlRepository from '../repositories/url';
 import prisma from '../db/prisma';
 import { ConflictError } from '../errors';
 
@@ -146,5 +147,184 @@ describe('urlService.getStats', () => {
     const stats = await urlService.getStats(created.shortCode, ownerId);
 
     expect(stats?.clickEvents).toHaveLength(1);
+  });
+});
+
+describe('urlService.create retries', () => {
+  beforeEach(resetDatabase);
+
+  const uniqueViolation = { code: 'P2002' };
+
+  it('generates another code when the first one is taken', async () => {
+    const create = spyOn(urlRepository, 'create');
+    create.mockImplementationOnce(() => Promise.reject(uniqueViolation));
+
+    try {
+      const url = await urlService.create(
+        { url: 'https://example.com' },
+        ownerId,
+      );
+
+      // A collision between two generated codes is retried, not reported
+      expect(url.shortCode).toHaveLength(6);
+      expect(create).toHaveBeenCalledTimes(2);
+    } finally {
+      create.mockRestore();
+    }
+  });
+
+  it('gives up after five collisions in a row', async () => {
+    const create = spyOn(urlRepository, 'create').mockImplementation(() =>
+      Promise.reject(uniqueViolation),
+    );
+
+    try {
+      const attempt = urlService.create(
+        { url: 'https://example.com' },
+        ownerId,
+      );
+
+      await expect(attempt).rejects.toThrow(
+        'Could not generate a unique short code',
+      );
+      expect(create).toHaveBeenCalledTimes(5);
+    } finally {
+      create.mockRestore();
+    }
+  });
+
+  it('does not retry a custom slug, which would reuse the value', async () => {
+    const create = spyOn(urlRepository, 'create').mockImplementation(() =>
+      Promise.reject(uniqueViolation),
+    );
+
+    try {
+      const attempt = urlService.create(
+        { url: 'https://example.com', customSlug: 'racing-slug' },
+        ownerId,
+      );
+
+      await expect(attempt).rejects.toThrow(ConflictError);
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      create.mockRestore();
+    }
+  });
+
+  it('lets a failure that is not a collision through untouched', async () => {
+    const create = spyOn(urlRepository, 'create').mockImplementation(() =>
+      Promise.reject(new Error('database is gone')),
+    );
+
+    try {
+      const attempt = urlService.create(
+        { url: 'https://example.com' },
+        ownerId,
+      );
+
+      await expect(attempt).rejects.toThrow('database is gone');
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      create.mockRestore();
+    }
+  });
+});
+
+describe('urlService.findAll', () => {
+  beforeEach(resetDatabase);
+
+  it('lists only the links of the owner, with their click counts', async () => {
+    const stranger = await prisma.user.create({
+      data: { email: 'stranger@example.com', passwordHash: 'unused' },
+    });
+    const mine = await urlService.create(
+      { url: 'https://example.com' },
+      ownerId,
+    );
+    await urlService.create({ url: 'https://other.com' }, stranger.id);
+    await urlService.resolveRedirect(mine.shortCode, {});
+
+    const urls = await urlService.findAll(ownerId);
+
+    expect(urls).toHaveLength(1);
+    expect(urls[0].shortCode).toBe(mine.shortCode);
+    expect(urls[0].clickCount).toBe(1);
+  });
+
+  it('answers with an empty list for an owner with no links', async () => {
+    expect(await urlService.findAll(ownerId)).toEqual([]);
+  });
+});
+
+describe('link ownership', () => {
+  beforeEach(resetDatabase);
+
+  it('hides the statistics and removal of a link it does not own', async () => {
+    const stranger = await prisma.user.create({
+      data: { email: 'stranger@example.com', passwordHash: 'unused' },
+    });
+    const created = await urlService.create(
+      { url: 'https://example.com' },
+      ownerId,
+    );
+
+    // Both answer as if the link did not exist, so codes cannot be probed
+    const { shortCode } = created;
+    expect(await urlService.getStats(shortCode, stranger.id)).toBeNull();
+    expect(await urlService.delete(shortCode, stranger.id)).toBe(false);
+    expect(await urlService.getStats(shortCode, ownerId)).not.toBeNull();
+  });
+
+  it('resolves a redirect for a link owned by someone else', async () => {
+    const created = await urlService.create(
+      { url: 'https://example.com' },
+      ownerId,
+    );
+
+    // The redirect is public, ownership only guards the management routes
+    const result = await urlService.resolveRedirect(created.shortCode, {});
+
+    expect(result.status).toBe('active');
+  });
+});
+
+describe('urlService.resolveRedirect click data', () => {
+  beforeEach(resetDatabase);
+
+  it('records what the visitor sent along', async () => {
+    const created = await urlService.create(
+      { url: 'https://example.com' },
+      ownerId,
+    );
+
+    await urlService.resolveRedirect(created.shortCode, {
+      userAgent: 'curl/8',
+      referer: 'https://news.example',
+      ip: '203.0.113.7',
+    });
+
+    const [click] = await prisma.click.findMany({
+      where: { urlId: created.id },
+    });
+    expect(click).toMatchObject({
+      userAgent: 'curl/8',
+      referer: 'https://news.example',
+      ip: '203.0.113.7',
+    });
+  });
+
+  it('records a visit that came with no headers at all', async () => {
+    const created = await urlService.create(
+      { url: 'https://example.com' },
+      ownerId,
+    );
+
+    await urlService.resolveRedirect(created.shortCode, {});
+
+    const [click] = await prisma.click.findMany({
+      where: { urlId: created.id },
+    });
+    expect(click.userAgent).toBeNull();
+    expect(click.ip).toBeNull();
   });
 });
