@@ -26,6 +26,17 @@ type Click = {
 
 type UrlWithClickCount = Url & { clickCount: number };
 
+type Page = {
+  page: number;
+  limit: number;
+};
+
+/** One page of a collection, carried with what the client needs to page on */
+type Paged<T> = {
+  items: T[];
+  total: number;
+};
+
 type UrlWithClickEvents = Url & { clickEvents: Click[] };
 
 type NewUrl = {
@@ -113,7 +124,7 @@ type UrlQuotaOptions = {
 };
 
 type UrlRepository = {
-  findAllByUser(userId: string): Promise<UrlWithClickCount[]>;
+  findAllByUser(userId: string, page: Page): Promise<Paged<UrlWithClickCount>>;
   create(url: NewUrl, quota?: UrlQuotaOptions): Promise<Url>;
   findByShortCode(shortCode: string): Promise<Url | null>;
   findOwnedWithClicks(
@@ -130,6 +141,7 @@ type UserRepository = {
   findByEmail(email: string): Promise<User | null>;
   findByEmailWithPassword(email: string): Promise<UserWithPassword | null>;
   updateRole(userId: string, roleId: string | null): Promise<User>;
+  countByRole(roleId: string): Promise<number>;
 };
 
 type RoleRepository = {
@@ -174,6 +186,8 @@ export type {
   NewSession,
   UrlWithClickCount,
   UrlWithClickEvents,
+  Page,
+  Paged,
   UrlRepository,
   ClickRepository,
   UserRepository,

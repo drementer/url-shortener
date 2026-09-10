@@ -110,8 +110,8 @@ describe('/api/roles access control', () => {
     const editorRole = await prisma.role.findUnique({ where: { name: 'EDITOR' } });
 
     // Promote user to EDITOR
-    const assignRes = await fetch(`${baseUrl}/api/roles/users/${user.id}`, {
-      method: 'PATCH',
+    const assignRes = await fetch(`${baseUrl}/api/users/${user.id}/role`, {
+      method: 'PUT',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${adminToken}`,
@@ -170,6 +170,61 @@ describe('/api/roles access control', () => {
     expect(body.error).toBe('Cannot rename the built-in ADMIN role');
   });
 
+  it('advertises a created role at the address it can be read from', async () => {
+    const admin = await createUser('admin-location@example.com', 'ADMIN');
+    const token = getAuthToken(admin, 'ADMIN');
+
+    const response = await fetch(`${baseUrl}/api/roles`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ name: 'LOCATED' }),
+    });
+    const role = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get('location')).toBe(`/api/roles/${role.id}`);
+  });
+
+  it('keeps createdAt out of a role response', async () => {
+    const admin = await createUser('admin-shape@example.com', 'ADMIN');
+    const token = getAuthToken(admin, 'ADMIN');
+    const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+
+    const response = await fetch(`${baseUrl}/api/roles/${userRole!.id}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(Object.keys(await response.json()).sort()).toEqual([
+      'description',
+      'id',
+      'maxActiveLinks',
+      'name',
+    ]);
+  });
+
+  it('rejects a patch that carries no field with 400', async () => {
+    const admin = await createUser('admin-empty@example.com', 'ADMIN');
+    const token = getAuthToken(admin, 'ADMIN');
+    const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
+
+    const response = await fetch(`${baseUrl}/api/roles/${userRole!.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'At least one field must be provided',
+    });
+  });
+
   it('rejects stale token when an admin user is demoted to a regular role', async () => {
     const superAdmin = await createUser('superadmin@example.com', 'ADMIN');
     const superAdminToken = getAuthToken(superAdmin, 'ADMIN');
@@ -180,8 +235,8 @@ describe('/api/roles access control', () => {
     const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
     // Demote targetUser to USER
-    const demoteRes = await fetch(`${baseUrl}/api/roles/users/${targetUser.id}`, {
-      method: 'PATCH',
+    const demoteRes = await fetch(`${baseUrl}/api/users/${targetUser.id}/role`, {
+      method: 'PUT',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${superAdminToken}`,
@@ -195,5 +250,67 @@ describe('/api/roles access control', () => {
       headers: { authorization: `Bearer ${staleAdminToken}` },
     });
     expect(forbiddenRes.status).toBe(403);
+  });
+});
+
+describe('DELETE /api/roles/:id', () => {
+  const removeRole = async (id: string, roleName = 'ADMIN') => {
+    const admin = await createUser(`deleter-${id}@example.com`, roleName);
+
+    return await fetch(`${baseUrl}/api/roles/${id}`, {
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${getAuthToken(admin, roleName)}` },
+    });
+  };
+
+  it('removes a role nothing depends on and answers 204', async () => {
+    const role = await prisma.role.create({ data: { name: 'DISPOSABLE' } });
+
+    const response = await removeRole(role.id);
+
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
+    expect(await prisma.role.findUnique({ where: { id: role.id } })).toBeNull();
+  });
+
+  it('refuses the built-in ADMIN role', async () => {
+    const role = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
+
+    const response = await removeRole(role!.id);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'Cannot delete the built-in ADMIN role',
+    });
+    // Refusing is only worth anything if the row is still there afterwards
+    expect(await prisma.role.count({ where: { id: role!.id } })).toBe(1);
+  });
+
+  it('refuses a role that is still assigned to someone', async () => {
+    const role = await prisma.role.findUnique({ where: { name: 'USER' } });
+    await createUser('still-holding@example.com', 'USER');
+
+    const response = await removeRole(role!.id);
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'Role is still assigned to 1 user(s)',
+    });
+  });
+
+  it('answers 404 for a role that does not exist', async () => {
+    const response = await removeRole('no-such-role');
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: 'Role not found' });
+  });
+
+  it('rejects a non-admin caller with 403', async () => {
+    const role = await prisma.role.create({ data: { name: 'GUARDED' } });
+
+    const response = await removeRole(role.id, 'USER');
+
+    expect(response.status).toBe(403);
+    expect(await prisma.role.count({ where: { id: role.id } })).toBe(1);
   });
 });

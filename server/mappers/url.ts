@@ -1,4 +1,11 @@
-import type { Click, Url, UrlWithClickEvents } from '../types';
+import type {
+  Click,
+  Page,
+  Paged,
+  Url,
+  UrlWithClickCount,
+  UrlWithClickEvents,
+} from '../types';
 
 // clickCount is absent on a freshly created url, which by definition has none
 type MappableUrl = Url & { clickCount?: number };
@@ -8,7 +15,6 @@ type MappableUrl = Url & { clickCount?: number };
  * not leak straight through to clients. Visitor IPs stay internal.
  */
 const toResponse = (url: Url, clicks: number) => ({
-  id: url.id,
   shortCode: url.shortCode,
   originalUrl: url.originalUrl,
   clicks,
@@ -30,4 +36,13 @@ const toStatsResponse = (url: UrlWithClickEvents) => ({
   clickEvents: url.clickEvents.map(toClickResponse),
 });
 
-export { toUrlResponse, toStatsResponse };
+/** The envelope a paged collection answers with, meta included */
+const toPagedUrlsResponse = (
+  { items, total }: Paged<UrlWithClickCount>,
+  { page, limit }: Page,
+) => ({
+  data: items.map(toUrlResponse),
+  meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+});
+
+export { toUrlResponse, toStatsResponse, toPagedUrlsResponse };

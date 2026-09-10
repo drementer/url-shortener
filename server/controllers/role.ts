@@ -4,45 +4,38 @@ import {
   findRoleById,
   createRole,
   updateRole,
-  assignUserRole,
+  deleteRole,
 } from '../use-cases/role';
-import {
-  createRoleSchema,
-  updateRoleSchema,
-  assignRoleSchema,
-} from '../validators/role';
-import { toUserResponse } from '../mappers/auth';
+import { toRoleResponse } from '../mappers/role';
 
 const roleController = {
   async findAll(req: Request, res: Response) {
     const roles = await findAllRoles();
-    res.json(roles);
+    res.json(roles.map(toRoleResponse));
   },
 
   async findById(req: Request, res: Response) {
     const id = req.params.id as string;
     const role = await findRoleById(id);
-    res.json(role);
+    res.json(toRoleResponse(role));
   },
 
   async create(req: Request, res: Response) {
-    const input = createRoleSchema.parse(req.body);
-    const role = await createRole(input);
-    res.status(201).json(role);
+    const role = await createRole(req.body);
+    res.location(`/api/roles/${role.id}`).status(201).json(toRoleResponse(role));
   },
 
   async update(req: Request, res: Response) {
     const id = req.params.id as string;
-    const input = updateRoleSchema.parse(req.body);
-    const role = await updateRole(id, input);
-    res.json(role);
+    const role = await updateRole(id, req.body);
+    res.json(toRoleResponse(role));
   },
 
-  async assignUserRole(req: Request, res: Response) {
-    const userId = req.params.userId as string;
-    const { roleId } = assignRoleSchema.parse(req.body);
-    const updatedUser = await assignUserRole(userId, roleId);
-    res.json(toUserResponse(updatedUser));
+  async remove(req: Request, res: Response) {
+    const id = req.params.id as string;
+    await deleteRole(id);
+
+    res.status(204).end();
   },
 };
 

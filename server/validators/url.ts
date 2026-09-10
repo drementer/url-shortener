@@ -32,4 +32,29 @@ const createUrlSchema: z.ZodType<CreateUrlCommand> = z.object({
     .optional(),
 });
 
-export { createUrlSchema };
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+
+/**
+ * Query strings arrive as text, so page and limit are coerced before the range
+ * is checked. The ceiling on limit is what keeps a single request from pulling
+ * an entire account's links.
+ */
+const listUrlsQuerySchema = z.object({
+  page: z.coerce
+    .number('page must be a number')
+    .int('page must be a whole number')
+    .positive('page must be greater than zero')
+    .default(1),
+  limit: z.coerce
+    .number('limit must be a number')
+    .int('limit must be a whole number')
+    .positive('limit must be greater than zero')
+    .max(MAX_PAGE_SIZE, `limit may not exceed ${MAX_PAGE_SIZE}`)
+    .default(DEFAULT_PAGE_SIZE),
+});
+
+type ListUrlsQuery = z.infer<typeof listUrlsQuerySchema>;
+
+export { createUrlSchema, listUrlsQuerySchema };
+export type { ListUrlsQuery };

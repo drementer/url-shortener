@@ -257,15 +257,22 @@ describe('findAllUrls', () => {
     await createUrl({ url: 'https://other.com' }, stranger.id);
     await resolveRedirect(mine.shortCode, {});
 
-    const urls = await findAllUrls(ownerId);
+    const { items, total } = await findAllUrls(ownerId, {
+      page: 1,
+      limit: 20,
+    });
 
-    expect(urls).toHaveLength(1);
-    expect(urls[0].shortCode).toBe(mine.shortCode);
-    expect(urls[0].clickCount).toBe(1);
+    expect(items).toHaveLength(1);
+    expect(total).toBe(1);
+    expect(items[0]!.shortCode).toBe(mine.shortCode);
+    expect(items[0]!.clickCount).toBe(1);
   });
 
   it('answers with an empty list for an owner with no links', async () => {
-    expect(await findAllUrls(ownerId)).toEqual([]);
+    expect(await findAllUrls(ownerId, { page: 1, limit: 20 })).toEqual({
+      items: [],
+      total: 0,
+    });
   });
 });
 

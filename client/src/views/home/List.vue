@@ -38,7 +38,7 @@ onMounted(() => {
       <div class="space-y-4">
         <div
           v-for="url in savedUrls"
-          :key="url.id"
+          :key="url.shortCode"
           class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
         >
           <div class="flex-1 min-w-0">

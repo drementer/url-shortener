@@ -1,3 +1,4 @@
+import { toRoleResponse } from './role';
 import type { User } from '../types';
 
 type IssuedSession = {
@@ -14,14 +15,7 @@ type IssuedSession = {
 const toUserResponse = (user: User) => ({
   id: user.id,
   email: user.email,
-  role: user.role
-    ? {
-        id: user.role.id,
-        name: user.role.name,
-        description: user.role.description,
-        maxActiveLinks: user.role.maxActiveLinks,
-      }
-    : null,
+  role: user.role ? toRoleResponse(user.role) : null,
   createdAt: user.createdAt,
 });
 
