@@ -984,9 +984,11 @@ components:
         details:
           type: array
           description: >-
-            Present on validation failures only. Carries every issue the schema
-            found, so a client can place each message on the field it belongs
-            to. The top level error repeats the first of these.
+            Present on validation failures only. Carries every field level
+            issue the schema found, so a client can place each message on the
+            field it belongs to. A schema level issue belongs to the body
+            rather than to a field and is reported by the top level error
+            alone, which otherwise repeats the first of these.
           items:
             type: object
             required: [path, message]
@@ -1043,8 +1045,8 @@ components:
       properties:
         id:
           type: string
-          description: Unique role identifier (CUID)
-          example: clxyzrole123abc
+          description: Unique role identifier (UUID)
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
         name:
           type: string
           description: Role name
@@ -1113,4 +1115,4 @@ components:
           type: string
           nullable: true
           description: ID of the role to assign to the user (null to unassign role)
-          example: clxyzrole123abc
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
