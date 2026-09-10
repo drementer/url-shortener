@@ -1114,5 +1114,5 @@ components:
         roleId:
           type: string
           nullable: true
-          description: ID of the role to assign to the user (null to unassign role)
+          description: UUID of the role to assign to the user (null to unassign role)
           example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
