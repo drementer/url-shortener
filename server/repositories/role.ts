@@ -43,9 +43,13 @@ const roleRepository: RoleRepository = {
     }
   },
 
-  async delete(id) {
+  async deleteIfUnassigned(id) {
+    // The absence of users is part of the delete rather than a check before
+    // it: between a separate count and this call a role can be handed out,
+    // and the relation is onDelete SetNull, so the delete would then strip
+    // that account of its role instead of being refused
     const { count } = await prisma.role.deleteMany({
-      where: { id },
+      where: { id, users: { none: {} } },
     });
 
     return count;

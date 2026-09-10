@@ -21,14 +21,18 @@ const deleteRole = async (id: string) => {
     throw new BadRequestError('Cannot delete the built-in ADMIN role');
   }
 
+  const deleted = await roleRepository.deleteIfUnassigned(id);
+  if (deleted) return;
+
+  // The delete refused, so the role is spoken for. Counting afterwards only
+  // shapes the message; the decision was made by the conditional delete. The
+  // row can also have gone in the meantime, and then nobody holds it.
   const assignedUsers = await userRepository.countByRole(id);
-  if (assignedUsers > 0) {
-    throw new ConflictError(
-      `Role is still assigned to ${assignedUsers} user(s)`,
-    );
+  if (!assignedUsers) {
+    throw new NotFoundError('Role not found');
   }
 
-  await roleRepository.delete(id);
+  throw new ConflictError(`Role is still assigned to ${assignedUsers} user(s)`);
 };
 
 export { deleteRole };

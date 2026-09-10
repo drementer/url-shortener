@@ -150,7 +150,8 @@ type RoleRepository = {
   findByName(name: string): Promise<Role | null>;
   create(role: NewRole): Promise<Role>;
   update(id: string, role: UpdateRole): Promise<Role>;
-  delete(id: string): Promise<number>;
+  /** Deletes only while no user holds the role, so the check cannot go stale */
+  deleteIfUnassigned(id: string): Promise<number>;
 };
 
 type SessionRepository = {
