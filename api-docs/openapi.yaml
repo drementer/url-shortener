@@ -22,6 +22,8 @@ tags:
     description: URL management endpoints
   - name: Roles
     description: Role and quota management endpoints (Admin only)
+  - name: Users
+    description: User administration endpoints (Admin only)
   - name: Redirect
     description: URL redirection endpoint
 
@@ -198,17 +200,8 @@ paths:
             schema:
               $ref: '#/components/schemas/RefreshTokenRequest'
       responses:
-        '200':
-          description: Session ended
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [message]
-                properties:
-                  message:
-                    type: string
-                    example: Logged out successfully
+        '204':
+          description: Session ended, no content returned
         '400':
           description: Refresh token missing from the request body
           content:
@@ -246,19 +239,45 @@ paths:
   /api/urls:
     get:
       summary: Get All URLs
-      description: Retrieve the shortened URLs belonging to the signed in user
+      description: >-
+        Retrieve one page of the shortened URLs belonging to the signed in
+        user, newest first.
       tags: [URLs]
+      parameters:
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: 1 based page number
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Links per page
       responses:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '200':
-          description: Successfully retrieved the URLs of the caller
+          description: Successfully retrieved one page of the caller's URLs
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Url'
+                $ref: '#/components/schemas/PagedUrls'
+        '400':
+          description: page or limit outside the accepted range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: limit may not exceed 100
         '500':
           description: Server error
           content:
@@ -281,6 +300,12 @@ paths:
       responses:
         '201':
           description: URL shortened successfully
+          headers:
+            Location:
+              description: Address the created link can be read from
+              schema:
+                type: string
+                example: /api/urls/abc123
           content:
             application/json:
               schema:
@@ -392,17 +417,8 @@ paths:
           description: The short code of the URL to delete
           example: abc123
       responses:
-        '200':
-          description: URL deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [message]
-                properties:
-                  message:
-                    type: string
-                    example: URL deleted successfully
+        '204':
+          description: URL deleted successfully, no content returned
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -460,6 +476,12 @@ paths:
       responses:
         '201':
           description: Role created successfully
+          headers:
+            Location:
+              description: Address the created role can be read from
+              schema:
+                type: string
+                example: /api/roles/a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
           content:
             application/json:
               schema:
@@ -542,11 +564,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Role'
         '400':
-          description: Validation error
+          description: Validation error, including an empty request body
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: At least one field must be provided
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -566,14 +590,63 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/roles/users/{userId}:
-    patch:
-      summary: Assign Role to User
-      description: Promote or change a user's assigned role and active link quota. Requires ADMIN role.
+    delete:
+      summary: Delete Role
+      description: >-
+        Delete a role. The built in ADMIN role cannot be deleted, and neither
+        can a role that is still assigned to at least one user. Requires ADMIN
+        role.
       tags: [Roles]
       parameters:
         - in: path
-          name: userId
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The role ID
+      responses:
+        '204':
+          description: Role deleted successfully, no content returned
+        '400':
+          description: The built in ADMIN role cannot be deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Cannot delete the built-in ADMIN role
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Role not found
+        '409':
+          description: The role is still assigned to at least one user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Role is still assigned to 3 user(s)
+
+  /api/users/{id}/role:
+    put:
+      summary: Set a User's Role
+      description: >-
+        Replace the role assigned to a user, or clear it with a null roleId.
+        Every session of that user is revoked, so a token carrying the old role
+        cannot outlive the change. Requires ADMIN role.
+      tags: [Users]
+      parameters:
+        - in: path
+          name: id
           required: true
           schema:
             type: string
@@ -697,12 +770,8 @@ components:
   schemas:
     Url:
       type: object
-      required: [id, shortCode, originalUrl, clicks, expiresAt, createdAt]
+      required: [shortCode, originalUrl, clicks, expiresAt, createdAt]
       properties:
-        id:
-          type: string
-          description: Unique URL identifier (CUID)
-          example: clxyz123abc456def
         shortCode:
           type: string
           description: Generated short code for the URL
@@ -730,12 +799,8 @@ components:
 
     UrlStats:
       type: object
-      required: [id, shortCode, originalUrl, clicks, expiresAt, createdAt, clickEvents]
+      required: [shortCode, originalUrl, clicks, expiresAt, createdAt, clickEvents]
       properties:
-        id:
-          type: string
-          description: Unique URL identifier (CUID)
-          example: clxyz123abc456def
         shortCode:
           type: string
           description: Generated short code for the URL
@@ -863,6 +928,32 @@ components:
           description: Account creation timestamp
           example: '2025-01-01T10:30:00Z'
 
+    PagedUrls:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Url'
+        meta:
+          type: object
+          required: [page, limit, total, totalPages]
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              description: Links in the whole collection, not on this page
+              example: 137
+            totalPages:
+              type: integer
+              example: 7
+
     SessionResponse:
       type: object
       required: [user, accessToken, refreshToken, expiresIn]
@@ -890,6 +981,25 @@ components:
           type: string
           description: Error message
           example: URL not found
+        details:
+          type: array
+          description: >-
+            Present on validation failures only. Carries every field level
+            issue the schema found, so a client can place each message on the
+            field it belongs to. A schema level issue belongs to the body
+            rather than to a field and is reported by the top level error
+            alone, which otherwise repeats the first of these.
+          items:
+            type: object
+            required: [path, message]
+            properties:
+              path:
+                type: string
+                description: Dotted path of the offending field
+                example: customSlug
+              message:
+                type: string
+                example: This custom slug is reserved
 
     HealthCheckResponse:
       type: object
@@ -908,12 +1018,12 @@ components:
 
     Role:
       type: object
-      required: [id, name, createdAt, updatedAt]
+      required: [id, name]
       properties:
         id:
           type: string
-          description: Unique role identifier (CUID)
-          example: clxyzrole123abc
+          description: Unique role identifier (UUID)
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
         name:
           type: string
           description: Unique role name
@@ -928,16 +1038,6 @@ components:
           nullable: true
           description: Maximum number of concurrently active links (null represents unlimited)
           example: 10
-        createdAt:
-          type: string
-          format: date-time
-          description: Role creation timestamp
-          example: '2026-09-06T12:00:00Z'
-        updatedAt:
-          type: string
-          format: date-time
-          description: Role update timestamp
-          example: '2026-09-06T12:00:00Z'
 
     RoleSummary:
       type: object
@@ -945,8 +1045,8 @@ components:
       properties:
         id:
           type: string
-          description: Unique role identifier (CUID)
-          example: clxyzrole123abc
+          description: Unique role identifier (UUID)
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
         name:
           type: string
           description: Role name
@@ -1014,5 +1114,5 @@ components:
         roleId:
           type: string
           nullable: true
-          description: ID of the role to assign to the user (null to unassign role)
-          example: clxyzrole123abc
+          description: UUID of the role to assign to the user (null to unassign role)
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d

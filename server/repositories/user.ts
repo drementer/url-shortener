@@ -70,6 +70,10 @@ const userRepository: UserRepository = {
       select: publicFields,
     });
   },
+
+  async countByRole(roleId) {
+    return await prisma.user.count({ where: { roleId } });
+  },
 };
 
 export default userRepository;

@@ -12,9 +12,18 @@ class AppError extends Error {
   }
 }
 
+/** Which field failed and why, so a client can place the message on a form */
+type FieldIssue = {
+  path: string;
+  message: string;
+};
+
 class BadRequestError extends AppError {
-  constructor(message = 'Bad request') {
+  details?: FieldIssue[];
+
+  constructor(message = 'Bad request', details?: FieldIssue[]) {
     super(message, 400);
+    this.details = details;
   }
 }
 
@@ -59,6 +68,7 @@ class QuotaExceededError extends ForbiddenError {
   }
 }
 
+export type { FieldIssue };
 export {
   AppError,
   BadRequestError,

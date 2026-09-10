@@ -175,11 +175,11 @@ Content-Type: application/json
 }
 ```
 
-**Response (201 Created):**
+**Response (201 Created):** the `Location` header carries the address the new
+link can be read from.
 
 ```json
 {
-  "id": "cmjpskm3j000012gdkaq2hbbz",
   "shortCode": "my-link",
   "originalUrl": "https://example.com",
   "clicks": 0,
@@ -200,25 +200,29 @@ Reserved slugs: `api`, `404`, `expired`, `stats`.
 ### List All URLs
 
 ```http
-GET /api/urls
+GET /api/urls?page=1&limit=20
 Authorization: Bearer <accessToken>
 ```
 
-Answers with the links of the signed in user only.
+Answers with the links of the signed in user only, newest first, one page at a
+time. `page` defaults to 1 and `limit` to 20, with 100 as the ceiling; a value
+outside those bounds answers `400`.
 
 **Response:**
 
 ```json
-[
-  {
-    "id": "cmjpskm3j000012gdkaq2hbbz",
-    "shortCode": "8XERSZ",
-    "originalUrl": "https://example.com",
-    "clicks": 0,
-    "expiresAt": null,
-    "createdAt": "2025-12-28T13:55:19.904Z"
-  }
-]
+{
+  "data": [
+    {
+      "shortCode": "8XERSZ",
+      "originalUrl": "https://example.com",
+      "clicks": 0,
+      "expiresAt": null,
+      "createdAt": "2025-12-28T13:55:19.904Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 1, "totalPages": 1 }
+}
 ```
 
 ### Redirect to Original URL
@@ -242,7 +246,6 @@ Authorization: Bearer <accessToken>
 
 ```json
 {
-  "id": "cmjpskrme000112gdyo5ehbh2",
   "shortCode": "abc123",
   "originalUrl": "https://google.com",
   "clicks": 5,
@@ -273,13 +276,7 @@ one (`DELETE /api/urls/:code`) follows the same rule.
 DELETE /api/urls/:code
 ```
 
-**Response:**
-
-```json
-{
-  "message": "URL deleted successfully"
-}
-```
+**Response:** `204 No Content`, with no body.
 
 ### Health Check / Status
 

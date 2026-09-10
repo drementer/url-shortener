@@ -62,7 +62,14 @@ describe('cross origin access', () => {
     });
 
     const allowed = response.headers.get('access-control-allow-methods');
-    expect(allowed?.split(',')).toEqual(['GET', 'POST', 'DELETE', 'OPTIONS']);
+    expect(allowed?.split(',')).toEqual([
+      'GET',
+      'POST',
+      'PUT',
+      'PATCH',
+      'DELETE',
+      'OPTIONS',
+    ]);
   });
 
   it('never widens the allowed origin for another site', async () => {

@@ -5,13 +5,20 @@ import {
   getUrlStats,
 } from '../use-cases/url';
 import { currentUser } from '../middlewares/auth';
-import { toUrlResponse, toStatsResponse } from '../mappers/url';
+import {
+  toUrlResponse,
+  toStatsResponse,
+  toPagedUrlsResponse,
+} from '../mappers/url';
 import type { Request, Response } from 'express';
+import type { ListUrlsQuery } from '../validators/url';
 
 const urlController = {
   async findAll(req: Request, res: Response) {
-    const urls = await findAllUrls(currentUser(req).id);
-    res.json(urls.map(toUrlResponse));
+    const page = res.locals.query as ListUrlsQuery;
+    const urls = await findAllUrls(currentUser(req).id, page);
+
+    res.json(toPagedUrlsResponse(urls, page));
   },
 
   async create(req: Request, res: Response) {
@@ -22,7 +29,10 @@ const urlController = {
       currentUser(req).id,
     );
 
-    res.status(201).json(toUrlResponse(shortUrl));
+    res
+      .location(`/api/urls/${shortUrl.shortCode}`)
+      .status(201)
+      .json(toUrlResponse(shortUrl));
   },
 
   async stats(req: Request, res: Response) {
@@ -36,7 +46,7 @@ const urlController = {
     const code = req.params.code as string;
     await deleteUrl(code, currentUser(req).id);
 
-    res.json({ message: 'URL deleted successfully' });
+    res.status(204).end();
   },
 };
 

@@ -3,11 +3,7 @@ import roleController from '../controllers/role';
 import { requireAuth, requireRole } from '../middlewares/auth';
 import { rateLimits } from '../middlewares/rate-limit';
 import { validateBody } from '../middlewares/validate';
-import {
-  createRoleSchema,
-  updateRoleSchema,
-  assignRoleSchema,
-} from '../validators/role';
+import { createRoleSchema, updateRoleSchema } from '../validators/role';
 
 const router = express.Router();
 
@@ -28,11 +24,6 @@ router.patch(
   validateBody(updateRoleSchema),
   roleController.update,
 );
-router.patch(
-  '/users/:userId',
-  rateLimits.general,
-  validateBody(assignRoleSchema),
-  roleController.assignUserRole,
-);
+router.delete('/:id', rateLimits.general, roleController.remove);
 
 export default router;

@@ -1,4 +1,4 @@
-import { AppError } from '../errors';
+import { AppError, BadRequestError } from '../errors';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
@@ -35,7 +35,13 @@ const errorHandler = (
   if (res.headersSent) return next(error);
 
   if (error instanceof AppError) {
-    res.status(error.statusCode).json({ error: error.message });
+    const details =
+      error instanceof BadRequestError ? error.details : undefined;
+
+    res.status(error.statusCode).json({
+      error: error.message,
+      ...(details ? { details } : {}),
+    });
     return;
   }
 

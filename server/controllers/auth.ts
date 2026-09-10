@@ -41,7 +41,7 @@ const authController = {
   async logout(req: Request, res: Response) {
     await logout(req.body.refreshToken);
 
-    res.json({ message: 'Logged out successfully' });
+    res.status(204).end();
   },
 
   async me(req: Request, res: Response) {

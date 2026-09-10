@@ -2,15 +2,20 @@ import express from 'express';
 import urlController from '../controllers/url';
 import { requireAuth } from '../middlewares/auth';
 import { rateLimits } from '../middlewares/rate-limit';
-import { validateBody } from '../middlewares/validate';
-import { createUrlSchema } from '../validators/url';
+import { validateBody, validateQuery } from '../middlewares/validate';
+import { createUrlSchema, listUrlsQuerySchema } from '../validators/url';
 
 const router = express.Router();
 
 // Every link belongs to a user, so none of these routes is public
 router.use(requireAuth);
 
-router.get('/', rateLimits.general, urlController.findAll);
+router.get(
+  '/',
+  rateLimits.general,
+  validateQuery(listUrlsQuerySchema),
+  urlController.findAll,
+);
 router.get('/:code', rateLimits.general, urlController.stats);
 router.post(
   '/',

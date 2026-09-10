@@ -106,6 +106,9 @@ describe('POST /api/auth/register', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'Password must be at least 8 characters',
+      details: [
+        { path: 'password', message: 'Password must be at least 8 characters' },
+      ],
     });
   });
 
@@ -117,6 +120,7 @@ describe('POST /api/auth/register', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'A password is required',
+      details: [{ path: 'password', message: 'A password is required' }],
     });
   });
 
@@ -126,6 +130,7 @@ describe('POST /api/auth/register', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'A valid email is required',
+      details: [{ path: 'email', message: 'A valid email is required' }],
     });
   });
 
@@ -294,6 +299,9 @@ describe('POST /api/auth/refresh', () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       error: 'Refresh token is required',
+      details: [
+        { path: 'refreshToken', message: 'Refresh token is required' },
+      ],
     });
   });
 });
@@ -309,7 +317,7 @@ describe('POST /api/auth/logout', () => {
       refreshToken: session.refreshToken,
     });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(204);
     expect(afterwards.status).toBe(401);
   });
 
@@ -318,10 +326,8 @@ describe('POST /api/auth/logout', () => {
       refreshToken: 'a token that was never issued',
     });
 
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      message: 'Logged out successfully',
-    });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe('');
   });
 });
 
@@ -349,7 +355,7 @@ describe('link ownership', () => {
     // 404 rather than 403, so short codes cannot be probed for existence
     expect(stats.status).toBe(404);
     expect(removal.status).toBe(404);
-    expect(await listing.json()).toEqual([]);
+    expect((await listing.json()).data).toEqual([]);
 
     // The link itself is untouched, the stranger only failed to reach it
     const surviving = await prisma.url.count({
@@ -366,9 +372,9 @@ describe('link ownership', () => {
     const response = await fetch(`${baseUrl}/api/urls`, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
-    const urls = await response.json();
+    const { data } = await response.json();
 
-    expect(urls.map((url: { shortCode: string }) => url.shortCode)).toEqual([
+    expect(data.map((url: { shortCode: string }) => url.shortCode)).toEqual([
       'mine-fixture',
     ]);
   });

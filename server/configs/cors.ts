@@ -7,6 +7,8 @@ export const corsOptions: CorsOptions = {
    * trailing slash or a path would never match a plain string comparison
    */
   origin: new URL(env.CLIENT_URL).origin,
-  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
+  // Cross-origin JS cannot read a response header unless it is exposed
+  exposedHeaders: ['Location'],
 };

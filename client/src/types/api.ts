@@ -38,7 +38,6 @@ export interface ApiError {
 
 /** Backend create response (POST /api/urls) */
 export interface CreateUrlResponse {
-  id: string;
   shortCode: string;
   originalUrl: string;
   expiresAt: string | null;
@@ -47,7 +46,6 @@ export interface CreateUrlResponse {
 
 /** Backend stats response (GET /api/urls/:code) */
 export interface UrlStatsResponse {
-  id: string;
   shortCode: string;
   originalUrl: string;
   expiresAt: string | null;

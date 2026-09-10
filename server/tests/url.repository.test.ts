@@ -66,9 +66,13 @@ describe('urlRepository.findAllByUser', () => {
     await urlRepository.create(newUrl('mine'));
     await urlRepository.create(newUrl('theirs', strangerId));
 
-    const urls = await urlRepository.findAllByUser(ownerId);
+    const { items, total } = await urlRepository.findAllByUser(ownerId, {
+      page: 1,
+      limit: 20,
+    });
 
-    expect(urls.map((url) => url.shortCode)).toEqual(['mine']);
+    expect(items.map((url) => url.shortCode)).toEqual(['mine']);
+    expect(total).toBe(1);
   });
 
   it('carries the click count as a plain number', async () => {
@@ -77,15 +81,68 @@ describe('urlRepository.findAllByUser', () => {
       data: [{ urlId: url.id }, { urlId: url.id }],
     });
 
-    const [found] = await urlRepository.findAllByUser(ownerId);
+    const { items } = await urlRepository.findAllByUser(ownerId, {
+      page: 1,
+      limit: 20,
+    });
+    const [found] = items;
 
     // The Prisma _count aggregate must not reach the domain untranslated
-    expect(found.clickCount).toBe(2);
+    expect(found!.clickCount).toBe(2);
     expect(found).not.toHaveProperty('_count');
   });
 
   it('answers with an empty list for an owner with no links', async () => {
-    expect(await urlRepository.findAllByUser(ownerId)).toEqual([]);
+    expect(
+      await urlRepository.findAllByUser(ownerId, { page: 1, limit: 20 }),
+    ).toEqual({ items: [], total: 0 });
+  });
+
+  it('answers one page at a time, newest first', async () => {
+    // createdAt is set here rather than left to the clock, so the two rows
+    // cannot land in the same millisecond and fall back to the tiebreaker
+    await prisma.url.createMany({
+      data: [
+        { shortCode: 'older', originalUrl: 'https://example.com', userId: ownerId, createdAt: new Date('2026-01-01T00:00:00.000Z') },
+        { shortCode: 'newer', originalUrl: 'https://example.com', userId: ownerId, createdAt: new Date('2026-01-02T00:00:00.000Z') },
+      ],
+    });
+
+    const first = await urlRepository.findAllByUser(ownerId, {
+      page: 1,
+      limit: 1,
+    });
+    const second = await urlRepository.findAllByUser(ownerId, {
+      page: 2,
+      limit: 1,
+    });
+
+    expect(first.items.map((url) => url.shortCode)).toEqual(['newer']);
+    expect(second.items.map((url) => url.shortCode)).toEqual(['older']);
+    // The count covers the whole collection, not the page that was served
+    expect(first.total).toBe(2);
+  });
+
+  it('orders links sharing a timestamp by their short code', async () => {
+    // Two links created in the same millisecond have no order of their own, so
+    // the query breaks the tie on the unique short code. Without it the pages
+    // are free to repeat one row and never reach the other.
+    const createdAt = new Date('2026-02-02T00:00:00.000Z');
+    await prisma.url.createMany({
+      data: ['tied-a', 'tied-b'].map((shortCode) => ({
+        shortCode,
+        originalUrl: 'https://example.com',
+        userId: ownerId,
+        createdAt,
+      })),
+    });
+
+    const { items } = await urlRepository.findAllByUser(ownerId, {
+      page: 1,
+      limit: 20,
+    });
+
+    expect(items.map((url) => url.shortCode)).toEqual(['tied-b', 'tied-a']);
   });
 });
 

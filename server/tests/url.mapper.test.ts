@@ -15,7 +15,6 @@ const url: Url = {
 describe('toUrlResponse', () => {
   it('answers with the contract fields and nothing else', () => {
     expect(toUrlResponse({ ...url, clickCount: 7 })).toEqual({
-      id: 'url-1',
       shortCode: 'abc123',
       originalUrl: 'https://example.com',
       clicks: 7,
@@ -29,6 +28,8 @@ describe('toUrlResponse', () => {
 
     expect(response).not.toHaveProperty('userId');
     expect(response).not.toHaveProperty('customSlug');
+    // shortCode is the addressable identifier, the internal uuid stays inside
+    expect(response).not.toHaveProperty('id');
   });
 
   it('reports no clicks for a freshly created link', () => {

@@ -5,17 +5,30 @@ import { canCreateLink, formatQuotaExceededMessage } from '../domain/role';
 import type { UrlRepository } from '../types';
 
 const urlRepository: UrlRepository = {
-  async findAllByUser(userId) {
-    const urls = await prisma.url.findMany({
-      where: { userId },
-      include: { _count: { select: { clickEvents: true } } },
-    });
+  async findAllByUser(userId, { page, limit }) {
+    const where = { userId };
+
+    const [urls, total] = await Promise.all([
+      prisma.url.findMany({
+        where,
+        include: { _count: { select: { clickEvents: true } } },
+        // Newest first, broken by the unique short code: two links created in
+        // the same millisecond would otherwise order arbitrarily, and a page
+        // boundary falling between them could repeat or skip one
+        orderBy: [{ createdAt: 'desc' }, { shortCode: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.url.count({ where }),
+    ]);
 
     // Translate the Prisma aggregate into the plain count the domain expects
-    return urls.map(({ _count, ...url }) => ({
+    const items = urls.map(({ _count, ...url }) => ({
       ...url,
       clickCount: _count.clickEvents,
     }));
+
+    return { items, total };
   },
 
   async create(
