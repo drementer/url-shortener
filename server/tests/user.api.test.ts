@@ -40,7 +40,7 @@ const setRole = async (
 ) => {
   const caller = await createUser(`caller-${userId}@example.com`, callerRole);
 
-  return await fetch(`${baseUrl}/api/users/${userId}/role`, {
+  return await fetch(`${baseUrl}/api/v1/users/${userId}/role`, {
     method: 'PUT',
     headers: {
       'content-type': 'application/json',
@@ -50,7 +50,7 @@ const setRole = async (
   });
 };
 
-describe('PUT /api/users/:id/role', () => {
+describe('PUT /api/v1/users/:id/role', () => {
   it('replaces the role and answers with the mapped user', async () => {
     const user = await createUser('promotee@example.com', 'USER');
     const editor = await prisma.role.findUnique({ where: { name: 'EDITOR' } });
@@ -145,7 +145,7 @@ describe('PUT /api/users/:id/role', () => {
   it('rejects an unauthenticated caller with 401', async () => {
     const user = await createUser('target@example.com', 'USER');
 
-    const response = await fetch(`${baseUrl}/api/users/${user.id}/role`, {
+    const response = await fetch(`${baseUrl}/api/v1/users/${user.id}/role`, {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ roleId: null }),

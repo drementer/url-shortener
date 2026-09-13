@@ -14,7 +14,7 @@ const OFFICE_ADDRESS = '10.3.0.1';
 
 /** Registers an account and hands back its access token */
 const registerToken = async (email: string, roleName?: string) => {
-  const response = await fetch(`${baseUrl}/api/auth/register`, {
+  const response = await fetch(`${baseUrl}/api/v1/auth/register`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -40,7 +40,7 @@ const registerToken = async (email: string, roleName?: string) => {
 };
 
 const createLink = (accessToken: string) =>
-  fetch(`${baseUrl}/api/urls`, {
+  fetch(`${baseUrl}/api/v1/urls`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -66,7 +66,7 @@ afterAll(() => {
   server.close();
 });
 
-describe('POST /api/urls rate limit', () => {
+describe('POST /api/v1/urls rate limit', () => {
   it('counts against the account, not the address it comes from', async () => {
     const heavy = await registerToken('heavy@example.com', 'ADMIN');
     const colleague = await registerToken('colleague@example.com', 'ADMIN');

@@ -29,7 +29,7 @@ const post = (path: string, body: unknown, forwardedFor?: string) =>
   });
 
 const register = (email: string, password = PASSWORD) =>
-  post('/api/auth/register', { email, password });
+  post('/api/v1/auth/register', { email, password });
 
 /** Registers an account and hands back the session it was given */
 const registerSession = async (email: string) => {
@@ -39,7 +39,7 @@ const registerSession = async (email: string) => {
 };
 
 const createLink = (accessToken: string, customSlug: string) =>
-  fetch(`${baseUrl}/api/urls`, {
+  fetch(`${baseUrl}/api/v1/urls`, {
     method: 'POST',
     headers: { ...headers(), authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({ url: 'https://example.com', customSlug }),
@@ -64,7 +64,7 @@ afterAll(() => {
   server.close();
 });
 
-describe('POST /api/auth/register', () => {
+describe('POST /api/v1/auth/register', () => {
   it('answers with the account and a token pair', async () => {
     const response = await register('register@example.com');
     const session = await response.json();
@@ -113,7 +113,7 @@ describe('POST /api/auth/register', () => {
   });
 
   it('rejects a request with no password', async () => {
-    const response = await post('/api/auth/register', {
+    const response = await post('/api/v1/auth/register', {
       email: 'nopassword@example.com',
     });
 
@@ -146,11 +146,11 @@ describe('POST /api/auth/register', () => {
   });
 });
 
-describe('POST /api/auth/login', () => {
+describe('POST /api/v1/auth/login', () => {
   it('starts a new session for the right password', async () => {
     await register('login@example.com');
 
-    const response = await post('/api/auth/login', {
+    const response = await post('/api/v1/auth/login', {
       email: 'login@example.com',
       password: PASSWORD,
     });
@@ -164,11 +164,11 @@ describe('POST /api/auth/login', () => {
   it('answers the same for a wrong password and an unknown email', async () => {
     await register('known@example.com');
 
-    const wrongPassword = await post('/api/auth/login', {
+    const wrongPassword = await post('/api/v1/auth/login', {
       email: 'known@example.com',
       password: 'wrong password entirely',
     });
-    const unknownEmail = await post('/api/auth/login', {
+    const unknownEmail = await post('/api/v1/auth/login', {
       email: 'nobody@example.com',
       password: PASSWORD,
     });
@@ -188,7 +188,7 @@ describe('POST /api/auth/login', () => {
     const attacker = '10.9.9.9';
     const attempt = () =>
       post(
-        '/api/auth/login',
+        '/api/v1/auth/login',
         { email: 'known@example.com', password: 'wrong password entirely' },
         attacker,
       );
@@ -205,11 +205,11 @@ describe('POST /api/auth/login', () => {
   });
 });
 
-describe('GET /api/auth/me', () => {
+describe('GET /api/v1/auth/me', () => {
   it('answers with the account behind the access token', async () => {
     const { accessToken } = await registerSession('me@example.com');
 
-    const response = await fetch(`${baseUrl}/api/auth/me`, {
+    const response = await fetch(`${baseUrl}/api/v1/auth/me`, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
 
@@ -218,14 +218,14 @@ describe('GET /api/auth/me', () => {
   });
 
   it('answers 401 without a token', async () => {
-    const response = await fetch(`${baseUrl}/api/auth/me`);
+    const response = await fetch(`${baseUrl}/api/v1/auth/me`);
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: 'Authentication required' });
   });
 
   it('answers 401 for a token that does not verify', async () => {
-    const response = await fetch(`${baseUrl}/api/auth/me`, {
+    const response = await fetch(`${baseUrl}/api/v1/auth/me`, {
       headers: { authorization: 'Bearer not-a-real-token' },
     });
 
@@ -236,16 +236,16 @@ describe('GET /api/auth/me', () => {
   });
 });
 
-describe('POST /api/auth/refresh', () => {
+describe('POST /api/v1/auth/refresh', () => {
   it('hands out a new pair and retires the token it was given', async () => {
     const session = await registerSession('refresh@example.com');
 
-    const response = await post('/api/auth/refresh', {
+    const response = await post('/api/v1/auth/refresh', {
       refreshToken: session.refreshToken,
     });
     const refreshed = await response.json();
 
-    const replay = await post('/api/auth/refresh', {
+    const replay = await post('/api/v1/auth/refresh', {
       refreshToken: session.refreshToken,
     });
 
@@ -258,15 +258,15 @@ describe('POST /api/auth/refresh', () => {
   it('ends every session when a retired token comes back', async () => {
     const session = await registerSession('replay@example.com');
 
-    const refreshed = await post('/api/auth/refresh', {
+    const refreshed = await post('/api/v1/auth/refresh', {
       refreshToken: session.refreshToken,
     });
     const { refreshToken: rotated } = await refreshed.json();
 
     // The leaked token surfacing again invalidates the chain it came from
-    await post('/api/auth/refresh', { refreshToken: session.refreshToken });
+    await post('/api/v1/auth/refresh', { refreshToken: session.refreshToken });
 
-    const response = await post('/api/auth/refresh', { refreshToken: rotated });
+    const response = await post('/api/v1/auth/refresh', { refreshToken: rotated });
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: 'Invalid refresh token' });
@@ -276,8 +276,8 @@ describe('POST /api/auth/refresh', () => {
     const session = await registerSession('race@example.com');
 
     const [first, second] = await Promise.all([
-      post('/api/auth/refresh', { refreshToken: session.refreshToken }),
-      post('/api/auth/refresh', { refreshToken: session.refreshToken }),
+      post('/api/v1/auth/refresh', { refreshToken: session.refreshToken }),
+      post('/api/v1/auth/refresh', { refreshToken: session.refreshToken }),
     ]);
 
     const accepted = [first, second].filter((r) => r.status === 200);
@@ -294,7 +294,7 @@ describe('POST /api/auth/refresh', () => {
   });
 
   it('answers 400 when no refresh token is sent', async () => {
-    const response = await post('/api/auth/refresh', {});
+    const response = await post('/api/v1/auth/refresh', {});
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
@@ -306,14 +306,14 @@ describe('POST /api/auth/refresh', () => {
   });
 });
 
-describe('POST /api/auth/logout', () => {
+describe('POST /api/v1/auth/logout', () => {
   it('ends the session behind the refresh token', async () => {
     const session = await registerSession('logout@example.com');
 
-    const response = await post('/api/auth/logout', {
+    const response = await post('/api/v1/auth/logout', {
       refreshToken: session.refreshToken,
     });
-    const afterwards = await post('/api/auth/refresh', {
+    const afterwards = await post('/api/v1/auth/refresh', {
       refreshToken: session.refreshToken,
     });
 
@@ -322,7 +322,7 @@ describe('POST /api/auth/logout', () => {
   });
 
   it('answers the same for a token it does not know', async () => {
-    const response = await post('/api/auth/logout', {
+    const response = await post('/api/v1/auth/logout', {
       refreshToken: 'a token that was never issued',
     });
 
@@ -341,14 +341,14 @@ describe('link ownership', () => {
     const strangerHeaders = {
       authorization: `Bearer ${stranger.accessToken}`,
     };
-    const stats = await fetch(`${baseUrl}/api/urls/owned-fixture`, {
+    const stats = await fetch(`${baseUrl}/api/v1/urls/owned-fixture`, {
       headers: strangerHeaders,
     });
-    const removal = await fetch(`${baseUrl}/api/urls/owned-fixture`, {
+    const removal = await fetch(`${baseUrl}/api/v1/urls/owned-fixture`, {
       method: 'DELETE',
       headers: strangerHeaders,
     });
-    const listing = await fetch(`${baseUrl}/api/urls`, {
+    const listing = await fetch(`${baseUrl}/api/v1/urls`, {
       headers: strangerHeaders,
     });
 
@@ -369,7 +369,7 @@ describe('link ownership', () => {
 
     await createLink(accessToken, 'mine-fixture');
 
-    const response = await fetch(`${baseUrl}/api/urls`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls`, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
     const { data } = await response.json();

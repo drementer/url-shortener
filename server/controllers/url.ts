@@ -30,7 +30,7 @@ const urlController = {
     );
 
     res
-      .location(`/api/urls/${shortUrl.shortCode}`)
+      .location(`/api/v1/urls/${shortUrl.shortCode}`)
       .status(201)
       .json(toUrlResponse(shortUrl));
   },

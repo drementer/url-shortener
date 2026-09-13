@@ -22,7 +22,10 @@ const roleController = {
 
   async create(req: Request, res: Response) {
     const role = await createRole(req.body);
-    res.location(`/api/roles/${role.id}`).status(201).json(toRoleResponse(role));
+    res
+      .location(`/api/v1/roles/${role.id}`)
+      .status(201)
+      .json(toRoleResponse(role));
   },
 
   async update(req: Request, res: Response) {

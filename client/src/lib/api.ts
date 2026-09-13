@@ -1,6 +1,9 @@
 import axios, { type AxiosResponse } from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const host = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+// The version prefix belongs to the base url, so call sites name resources only
+const baseURL = `${host}/api/v1`;
 
 const client = axios.create({
   baseURL,

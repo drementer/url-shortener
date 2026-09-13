@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Email and password accounts with `POST /api/auth/register` and `/api/auth/login`
+- Email and password accounts with `POST /api/v1/auth/register` and `/api/v1/auth/login`
 - Bearer access tokens (15 minutes by default) plus refresh tokens exchanged at
-  `POST /api/auth/refresh`, with `POST /api/auth/logout` ending a session
+  `POST /api/v1/auth/refresh`, with `POST /api/v1/auth/logout` ending a session
 - Refresh token rotation: every exchange retires the old token, and replaying a
   retired one is treated as a leak and ends all sessions of that user
-- `GET /api/auth/me` for the account behind an access token
+- `GET /api/v1/auth/me` for the account behind an access token
 - Passwords hashed with scrypt from `node:crypto`, refresh tokens stored as a
   SHA-256 hash
 - `authAttempt` rate limit of 10 requests per 15 minutes on the credential routes
@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Links now belong to the user who created them; every `/api/urls` route
+- Links now belong to the user who created them; every `/api/v1/urls` route
   requires an access token and only ever sees that user's links
 - A link owned by another user answers `404` rather than `403`, so short codes
   cannot be enumerated through the API
@@ -36,6 +36,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reduced `linkCreate` limit from 30 to 10 requests per window
 - Downgraded `standardHeaders` from draft-7 to draft-6 for broader compatibility
 - Removed Turkish inline comments from rate limit middleware
+- Resources moved under a version prefix: every `/api/*` route is now
+  `/api/v1/*`, so a future breaking change can ship as `v2` while `v1` keeps
+  answering
+- The health check moved out of the version prefix, from `/api/status` to
+  `/health`, so uptime monitors and container probes survive a version bump;
+  `health` joins the reserved slugs, since that route would shadow a link
+  claiming it
 
 ## [1.0.0] - 2025-12-28
 

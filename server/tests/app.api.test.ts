@@ -28,9 +28,9 @@ afterAll(() => {
   server.close();
 });
 
-describe('GET /api/status', () => {
+describe('GET /health', () => {
   it('answers ok with the current time', async () => {
-    const response = await get('/api/status');
+    const response = await get('/health');
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -41,7 +41,7 @@ describe('GET /api/status', () => {
 
 describe('cross origin access', () => {
   it('names the configured client as the allowed origin', async () => {
-    const response = await get('/api/status', { origin: env.CLIENT_URL });
+    const response = await get('/health', { origin: env.CLIENT_URL });
 
     expect(response.headers.get('access-control-allow-origin')).toBe(
       new URL(env.CLIENT_URL).origin,
@@ -52,7 +52,7 @@ describe('cross origin access', () => {
   });
 
   it('answers a preflight with the methods the API serves', async () => {
-    const response = await fetch(`${baseUrl}/api/urls`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls`, {
       method: 'OPTIONS',
       headers: {
         'x-forwarded-for': `10.2.1.${++clientCount}`,
@@ -74,7 +74,7 @@ describe('cross origin access', () => {
 
   it('never widens the allowed origin for another site', async () => {
     // The browser compares the two itself, so echoing the caller would open it
-    const response = await get('/api/status', {
+    const response = await get('/health', {
       origin: 'http://evil.example',
     });
 
@@ -86,14 +86,14 @@ describe('cross origin access', () => {
 
 describe('response hardening', () => {
   it('sends the headers helmet is mounted for', async () => {
-    const response = await get('/api/status');
+    const response = await get('/health');
 
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
     expect(response.headers.get('x-frame-options')).toBe('SAMEORIGIN');
   });
 
   it('does not announce the framework', async () => {
-    const response = await get('/api/status');
+    const response = await get('/health');
 
     expect(response.headers.get('x-powered-by')).toBeNull();
   });
@@ -101,7 +101,7 @@ describe('response hardening', () => {
 
 describe('a body the parser refuses', () => {
   const post = (body: string) =>
-    fetch(`${baseUrl}/api/auth/login`, {
+    fetch(`${baseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -132,10 +132,10 @@ describe('a body the parser refuses', () => {
 
 describe('authentication guard', () => {
   const paths = [
-    { method: 'GET', path: '/api/urls' },
-    { method: 'GET', path: '/api/urls/some-code' },
-    { method: 'POST', path: '/api/urls' },
-    { method: 'DELETE', path: '/api/urls/some-code' },
+    { method: 'GET', path: '/api/v1/urls' },
+    { method: 'GET', path: '/api/v1/urls/some-code' },
+    { method: 'POST', path: '/api/v1/urls' },
+    { method: 'DELETE', path: '/api/v1/urls/some-code' },
   ];
 
   it.each(paths)('answers 401 on $method $path unsigned', async (route) => {

@@ -15,7 +15,7 @@ const authHeaders = () => ({
 });
 
 const post = (body: unknown) =>
-  fetch(`${baseUrl}/api/urls`, {
+  fetch(`${baseUrl}/api/v1/urls`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(body),
@@ -23,7 +23,7 @@ const post = (body: unknown) =>
 
 /** Links are owned, so the suite needs an account to create them as */
 const registerFixtureUser = async () => {
-  const response = await fetch(`${baseUrl}/api/auth/register`, {
+  const response = await fetch(`${baseUrl}/api/v1/auth/register`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -58,7 +58,7 @@ afterAll(() => {
   server.close();
 });
 
-describe('POST /api/urls', () => {
+describe('POST /api/v1/urls', () => {
   it('rejects an invalid URL with a field level message', async () => {
     const response = await post({ url: 'not-a-url' });
 
@@ -92,7 +92,7 @@ describe('POST /api/urls', () => {
 
     expect(response.status).toBe(201);
     // The created resource is advertised at the address it can be read from
-    expect(response.headers.get('location')).toBe('/api/urls/api-test');
+    expect(response.headers.get('location')).toBe('/api/v1/urls/api-test');
     expect(Object.keys(await response.json()).sort()).toEqual([
       'clicks',
       'createdAt',
@@ -119,7 +119,7 @@ describe('POST /api/urls', () => {
 
 describe('error responses', () => {
   it('answers 404 as JSON for an unknown code', async () => {
-    const response = await fetch(`${baseUrl}/api/urls/nothing-here`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls/nothing-here`, {
       headers: authHeaders(),
     });
 
@@ -128,7 +128,7 @@ describe('error responses', () => {
   });
 
   it('answers 404 as JSON when deleting an unknown code', async () => {
-    const response = await fetch(`${baseUrl}/api/urls/nothing-here`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls/nothing-here`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -145,11 +145,11 @@ describe('error responses', () => {
   });
 });
 
-describe('DELETE /api/urls/:code', () => {
+describe('DELETE /api/v1/urls/:code', () => {
   it('answers 204 with no body once the link is gone', async () => {
     await post({ url: 'https://example.com', customSlug: 'delete-fixture' });
 
-    const response = await fetch(`${baseUrl}/api/urls/delete-fixture`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls/delete-fixture`, {
       method: 'DELETE',
       headers: authHeaders(),
     });
@@ -162,13 +162,13 @@ describe('DELETE /api/urls/:code', () => {
   });
 });
 
-describe('GET /api/urls paging', () => {
+describe('GET /api/v1/urls paging', () => {
   const SLUGS = ['paged-oldest', 'paged-middle', 'paged-newest'];
 
   let pagerToken: string;
 
   const listing = (query = '') =>
-    fetch(`${baseUrl}/api/urls${query}`, {
+    fetch(`${baseUrl}/api/v1/urls${query}`, {
       headers: { authorization: `Bearer ${pagerToken}` },
     });
 
@@ -251,12 +251,12 @@ describe('GET /api/urls paging', () => {
   });
 });
 
-describe('GET /api/urls', () => {
+describe('GET /api/v1/urls', () => {
   it('never exposes visitor IPs in the statistics', async () => {
     await post({ url: 'https://example.com', customSlug: 'stats-fixture' });
     await fetch(`${baseUrl}/stats-fixture`, { redirect: 'manual' });
 
-    const response = await fetch(`${baseUrl}/api/urls/stats-fixture`, {
+    const response = await fetch(`${baseUrl}/api/v1/urls/stats-fixture`, {
       headers: authHeaders(),
     });
     const stats = await response.json();

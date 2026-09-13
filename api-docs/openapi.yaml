@@ -31,7 +31,7 @@ security:
   - bearerAuth: []
 
 paths:
-  /api/status:
+  /health:
     get:
       summary: Health Check
       description: Verify that the API server is running and healthy
@@ -45,7 +45,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HealthCheckResponse'
 
-  /api/auth/register:
+  /api/v1/auth/register:
     post:
       summary: Register
       description: Create an account and start a session for it
@@ -100,7 +100,7 @@ paths:
               example:
                 error: Too many attempts, please try again later
 
-  /api/auth/login:
+  /api/v1/auth/login:
     post:
       summary: Log In
       description: Exchange email and password for a new session
@@ -138,7 +138,7 @@ paths:
               example:
                 error: Too many attempts, please try again later
 
-  /api/auth/refresh:
+  /api/v1/auth/refresh:
     post:
       summary: Refresh Session
       description: >-
@@ -185,7 +185,7 @@ paths:
               example:
                 error: Too many attempts, please try again later
 
-  /api/auth/logout:
+  /api/v1/auth/logout:
     post:
       summary: Log Out
       description: >-
@@ -219,7 +219,7 @@ paths:
               example:
                 error: Too many requests, please try again later
 
-  /api/auth/me:
+  /api/v1/auth/me:
     get:
       summary: Get Current User
       description: The account the access token belongs to
@@ -236,7 +236,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /api/urls:
+  /api/v1/urls:
     get:
       summary: Get All URLs
       description: >-
@@ -305,7 +305,7 @@ paths:
               description: Address the created link can be read from
               schema:
                 type: string
-                example: /api/urls/abc123
+                example: /api/v1/urls/abc123
           content:
             application/json:
               schema:
@@ -360,7 +360,7 @@ paths:
               example:
                 error: URL creation limit reached, try again later
 
-  /api/urls/{code}:
+  /api/v1/urls/{code}:
     get:
       summary: Get URL Statistics
       description: >-
@@ -444,7 +444,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
-  /api/roles:
+  /api/v1/roles:
     get:
       summary: List All Roles
       description: Retrieve all defined user roles and their link quotas. Requires ADMIN role.
@@ -481,7 +481,7 @@ paths:
               description: Address the created role can be read from
               schema:
                 type: string
-                example: /api/roles/a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
+                example: /api/v1/roles/a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
           content:
             application/json:
               schema:
@@ -507,7 +507,7 @@ paths:
               example:
                 error: Role with name 'VIP' already exists
 
-  /api/roles/{id}:
+  /api/v1/roles/{id}:
     get:
       summary: Get Role by ID
       description: Retrieve details of a specific role by its ID. Requires ADMIN role.
@@ -636,7 +636,7 @@ paths:
               example:
                 error: Role is still assigned to 3 user(s)
 
-  /api/users/{id}/role:
+  /api/v1/users/{id}/role:
     put:
       summary: Set a User's Role
       description: >-
