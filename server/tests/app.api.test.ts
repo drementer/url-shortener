@@ -131,11 +131,20 @@ describe('a body the parser refuses', () => {
 });
 
 describe('media type of the request', () => {
+  /**
+   * Sent as bytes rather than as a string: the fetch standard gives a string
+   * body a Content-Type of its own, which would announce a type the case below
+   * is meant to leave out.
+   */
+  const body = new TextEncoder().encode(
+    JSON.stringify({ email: 'a@example.com', password: 'Passw0rd!' }),
+  );
+
   const post = (headers: Record<string, string>) =>
     fetch(`${baseUrl}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'x-forwarded-for': `10.2.4.${++clientCount}`, ...headers },
-      body: JSON.stringify({ email: 'a@example.com', password: 'Passw0rd!' }),
+      body,
     });
 
   it('answers 415 for a body announced as another type', async () => {
