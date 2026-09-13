@@ -36,7 +36,7 @@ export interface ApiError {
   errors?: Record<string, string[]>;
 }
 
-/** Backend create response (POST /api/urls) */
+/** Backend create response (POST /api/v1/urls) */
 export interface CreateUrlResponse {
   shortCode: string;
   originalUrl: string;
@@ -44,7 +44,7 @@ export interface CreateUrlResponse {
   createdAt: string;
 }
 
-/** Backend stats response (GET /api/urls/:code) */
+/** Backend stats response (GET /api/v1/urls/:code) */
 export interface UrlStatsResponse {
   shortCode: string;
   originalUrl: string;

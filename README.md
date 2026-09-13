@@ -126,13 +126,13 @@ from scratch on every run, so it never touches development data.
 
 ### Authentication
 
-Every `/api/urls` route belongs to an account and requires an access token. Only
+Every `/api/v1/urls` route belongs to an account and requires an access token. Only
 the redirect (`GET /:code`), the health check and the auth routes themselves are
 public.
 
 ```http
-POST /api/auth/register
-POST /api/auth/login
+POST /api/v1/auth/register
+POST /api/v1/auth/login
 Content-Type: application/json
 
 { "email": "user@example.com", "password": "correct horse battery" }
@@ -156,15 +156,15 @@ Authorization: Bearer <accessToken>
 ```
 
 Once it expires, exchange the refresh token for a new pair with
-`POST /api/auth/refresh`. Each refresh token works exactly once: the exchange
+`POST /api/v1/auth/refresh`. Each refresh token works exactly once: the exchange
 retires it, and replaying a retired one is treated as a leak and ends every
-session of that user. `POST /api/auth/logout` ends a single session, and
-`GET /api/auth/me` answers with the account behind an access token.
+session of that user. `POST /api/v1/auth/logout` ends a single session, and
+`GET /api/v1/auth/me` answers with the account behind an access token.
 
 ### Create Short URL
 
 ```http
-POST /api/urls
+POST /api/v1/urls
 Authorization: Bearer <accessToken>
 Content-Type: application/json
 
@@ -195,12 +195,12 @@ already taken answers `409`:
 { "error": "This custom slug is already in use" }
 ```
 
-Reserved slugs: `api`, `404`, `expired`, `stats`.
+Reserved slugs: `api`, `404`, `expired`, `health`, `stats`.
 
 ### List All URLs
 
 ```http
-GET /api/urls?page=1&limit=20
+GET /api/v1/urls?page=1&limit=20
 Authorization: Bearer <accessToken>
 ```
 
@@ -238,7 +238,7 @@ an expired one to `CLIENT_URL/expired/:code`.
 ### Get URL Statistics
 
 ```http
-GET /api/urls/:code
+GET /api/v1/urls/:code
 Authorization: Bearer <accessToken>
 ```
 
@@ -268,12 +268,12 @@ returned.
 
 A code belonging to another account answers `404`, exactly like an unknown one,
 so the endpoint cannot be used to find out which short codes are taken. Deleting
-one (`DELETE /api/urls/:code`) follows the same rule.
+one (`DELETE /api/v1/urls/:code`) follows the same rule.
 
 ### Delete URL
 
 ```http
-DELETE /api/urls/:code
+DELETE /api/v1/urls/:code
 ```
 
 **Response:** `204 No Content`, with no body.
@@ -281,7 +281,7 @@ DELETE /api/urls/:code
 ### Health Check / Status
 
 ```http
-GET /api/status
+GET /health
 ```
 
 **Response:**

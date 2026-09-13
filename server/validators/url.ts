@@ -2,7 +2,7 @@ import { z } from 'zod';
 import type { CreateUrlCommand } from '../use-cases/url';
 
 const SLUG_PATTERN = /^[A-Za-z0-9_-]+$/;
-const RESERVED_SLUGS = ['api', '404', 'expired', 'stats'];
+const RESERVED_SLUGS = ['api', '404', 'expired', 'health', 'stats'];
 const MAX_EXPIRY_HOURS = 24 * 365;
 
 const customSlugSchema = z

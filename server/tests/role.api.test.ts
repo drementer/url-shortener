@@ -32,9 +32,9 @@ const getAuthToken = (user: { id: string; email: string }, roleName?: string) =>
     ...(roleName ? { role: roleName } : {}),
   });
 
-describe('/api/roles access control', () => {
+describe('/api/v1/roles access control', () => {
   it('rejects unauthenticated requests with 401', async () => {
-    const response = await fetch(`${baseUrl}/api/roles`);
+    const response = await fetch(`${baseUrl}/api/v1/roles`);
     expect(response.status).toBe(401);
   });
 
@@ -42,7 +42,7 @@ describe('/api/roles access control', () => {
     const user = await createUser('regular@example.com', 'USER');
     const token = getAuthToken(user, 'USER');
 
-    const response = await fetch(`${baseUrl}/api/roles`, {
+    const response = await fetch(`${baseUrl}/api/v1/roles`, {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.status).toBe(403);
@@ -52,7 +52,7 @@ describe('/api/roles access control', () => {
     const admin = await createUser('admin@example.com', 'ADMIN');
     const token = getAuthToken(admin, 'ADMIN');
 
-    const response = await fetch(`${baseUrl}/api/roles`, {
+    const response = await fetch(`${baseUrl}/api/v1/roles`, {
       headers: { authorization: `Bearer ${token}` },
     });
     expect(response.status).toBe(200);
@@ -69,7 +69,7 @@ describe('/api/roles access control', () => {
     const token = getAuthToken(admin, 'ADMIN');
 
     // Create custom role VIP
-    const createRes = await fetch(`${baseUrl}/api/roles`, {
+    const createRes = await fetch(`${baseUrl}/api/v1/roles`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -87,7 +87,7 @@ describe('/api/roles access control', () => {
     expect(createdRole.maxActiveLinks).toBe(100);
 
     // Update VIP role limit to 200
-    const updateRes = await fetch(`${baseUrl}/api/roles/${createdRole.id}`, {
+    const updateRes = await fetch(`${baseUrl}/api/v1/roles/${createdRole.id}`, {
       method: 'PATCH',
       headers: {
         'content-type': 'application/json',
@@ -110,7 +110,7 @@ describe('/api/roles access control', () => {
     const editorRole = await prisma.role.findUnique({ where: { name: 'EDITOR' } });
 
     // Promote user to EDITOR
-    const assignRes = await fetch(`${baseUrl}/api/users/${user.id}/role`, {
+    const assignRes = await fetch(`${baseUrl}/api/v1/users/${user.id}/role`, {
       method: 'PUT',
       headers: {
         'content-type': 'application/json',
@@ -138,7 +138,7 @@ describe('/api/roles access control', () => {
 
     // 11th link via API fails with 403 quota exceeded!
     const userToken = getAuthToken(user, 'EDITOR');
-    const eleventhRes = await fetch(`${baseUrl}/api/urls`, {
+    const eleventhRes = await fetch(`${baseUrl}/api/v1/urls`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -156,7 +156,7 @@ describe('/api/roles access control', () => {
     const adminToken = getAuthToken(admin, 'ADMIN');
     const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } });
 
-    const renameRes = await fetch(`${baseUrl}/api/roles/${adminRole!.id}`, {
+    const renameRes = await fetch(`${baseUrl}/api/v1/roles/${adminRole!.id}`, {
       method: 'PATCH',
       headers: {
         'content-type': 'application/json',
@@ -174,7 +174,7 @@ describe('/api/roles access control', () => {
     const admin = await createUser('admin-location@example.com', 'ADMIN');
     const token = getAuthToken(admin, 'ADMIN');
 
-    const response = await fetch(`${baseUrl}/api/roles`, {
+    const response = await fetch(`${baseUrl}/api/v1/roles`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -185,7 +185,7 @@ describe('/api/roles access control', () => {
     const role = await response.json();
 
     expect(response.status).toBe(201);
-    expect(response.headers.get('location')).toBe(`/api/roles/${role.id}`);
+    expect(response.headers.get('location')).toBe(`/api/v1/roles/${role.id}`);
   });
 
   it('keeps createdAt out of a role response', async () => {
@@ -193,7 +193,7 @@ describe('/api/roles access control', () => {
     const token = getAuthToken(admin, 'ADMIN');
     const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
-    const response = await fetch(`${baseUrl}/api/roles/${userRole!.id}`, {
+    const response = await fetch(`${baseUrl}/api/v1/roles/${userRole!.id}`, {
       headers: { authorization: `Bearer ${token}` },
     });
 
@@ -210,7 +210,7 @@ describe('/api/roles access control', () => {
     const token = getAuthToken(admin, 'ADMIN');
     const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
-    const response = await fetch(`${baseUrl}/api/roles/${userRole!.id}`, {
+    const response = await fetch(`${baseUrl}/api/v1/roles/${userRole!.id}`, {
       method: 'PATCH',
       headers: {
         'content-type': 'application/json',
@@ -235,7 +235,7 @@ describe('/api/roles access control', () => {
     const userRole = await prisma.role.findUnique({ where: { name: 'USER' } });
 
     // Demote targetUser to USER
-    const demoteRes = await fetch(`${baseUrl}/api/users/${targetUser.id}/role`, {
+    const demoteRes = await fetch(`${baseUrl}/api/v1/users/${targetUser.id}/role`, {
       method: 'PUT',
       headers: {
         'content-type': 'application/json',
@@ -246,18 +246,18 @@ describe('/api/roles access control', () => {
     expect(demoteRes.status).toBe(200);
 
     // Attempting to access admin-only endpoint with stale token must be rejected with 403
-    const forbiddenRes = await fetch(`${baseUrl}/api/roles`, {
+    const forbiddenRes = await fetch(`${baseUrl}/api/v1/roles`, {
       headers: { authorization: `Bearer ${staleAdminToken}` },
     });
     expect(forbiddenRes.status).toBe(403);
   });
 });
 
-describe('DELETE /api/roles/:id', () => {
+describe('DELETE /api/v1/roles/:id', () => {
   const removeRole = async (id: string, roleName = 'ADMIN') => {
     const admin = await createUser(`deleter-${id}@example.com`, roleName);
 
-    return await fetch(`${baseUrl}/api/roles/${id}`, {
+    return await fetch(`${baseUrl}/api/v1/roles/${id}`, {
       method: 'DELETE',
       headers: { authorization: `Bearer ${getAuthToken(admin, roleName)}` },
     });

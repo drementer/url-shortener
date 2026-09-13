@@ -10,12 +10,12 @@ export function useUrls() {
     url: string,
     customSlug?: string,
   ): Promise<CreateUrlResponse> => {
-    const response = await api.post('/api/urls', { url, customSlug });
+    const response = await api.post('/urls', { url, customSlug });
     return response.data;
   };
 
   const getUrlStats = async (code: string): Promise<UrlStatsResponse> => {
-    const response = await api.get(`/api/urls/${encodeURIComponent(code)}`);
+    const response = await api.get(`/urls/${encodeURIComponent(code)}`);
     return response.data;
   };
 

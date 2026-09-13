@@ -64,6 +64,7 @@ describe('createUrlSchema custom slug', () => {
     expect(firstIssue({ url: URL, customSlug: 'API' })).toBe(message);
     expect(firstIssue({ url: URL, customSlug: 'Expired' })).toBe(message);
     expect(firstIssue({ url: URL, customSlug: 'stats' })).toBe(message);
+    expect(firstIssue({ url: URL, customSlug: 'health' })).toBe(message);
     expect(firstIssue({ url: URL, customSlug: '404' })).toBe(message);
   });
 });
