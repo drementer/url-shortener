@@ -2,7 +2,17 @@ openapi: 3.0.0
 info:
   title: URL Shortener API
   version: 1.0.0
-  description: A simple and efficient URL shortening service API
+  description: >-
+    A simple and efficient URL shortening service API.
+
+
+    **Media types.** Every endpoint but the redirect reads and writes
+    `application/json` and nothing else. A request body sent under any other
+    `Content-Type` is refused with `415`, and an `Accept` header that rules out
+    `application/json` is refused with `406`. No response varies by `Accept`,
+    so none of them carries a `Vary: Accept` header. The redirect endpoint
+    `/{code}` is a browser surface and is left out of this: it always answers
+    with a `302`.
   contact:
     name: URL Shortener Team
     url: https://github.com/drementer/url-shortener
@@ -44,6 +54,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthCheckResponse'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /api/v1/auth/register:
     post:
@@ -83,6 +95,8 @@ paths:
                   summary: Password too short
                   value:
                     error: Password must be at least 8 characters
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           description: The email already belongs to an account
           content:
@@ -91,6 +105,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: This email is already registered
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           description: More than 10 attempts within 15 minutes
           content:
@@ -129,6 +145,10 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Invalid email or password
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           description: More than 10 attempts within 15 minutes
           content:
@@ -176,6 +196,10 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Invalid refresh token
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           description: More than 10 attempts within 15 minutes
           content:
@@ -210,6 +234,10 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Refresh token is required
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           description: More than 150 requests within a minute
           content:
@@ -235,6 +263,8 @@ paths:
                 $ref: '#/components/schemas/User'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
   /api/v1/urls:
     get:
@@ -278,6 +308,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: limit may not exceed 100
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '500':
           description: Server error
           content:
@@ -343,6 +375,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Active link quota exceeded (maximum 10 active links allowed for role EDITOR)
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           description: The requested custom slug is already taken
           content:
@@ -351,6 +385,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: This custom slug is already in use
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           description: More than 10 URLs created within a minute
           content:
@@ -393,6 +429,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: URL not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '500':
           description: Server error
           content:
@@ -429,6 +467,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: URL not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '429':
           description: More than 10 delete requests within a minute
           content:
@@ -462,6 +502,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
     post:
       summary: Create Role
@@ -498,6 +540,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           description: A role with this name already exists
           content:
@@ -506,6 +550,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Role with name 'VIP' already exists
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
 
   /api/v1/roles/{id}:
     get:
@@ -538,6 +584,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Role not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
 
     patch:
       summary: Update Role
@@ -583,12 +631,16 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Role not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           description: Role name conflict
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
 
     delete:
       summary: Delete Role
@@ -627,6 +679,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 error: Role not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
         '409':
           description: The role is still assigned to at least one user
           content:
@@ -689,6 +743,10 @@ paths:
                   summary: Role not found
                   value:
                     error: Role not found
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
 
   /{code}:
     get:
@@ -750,6 +808,28 @@ components:
               summary: Token does not verify
               value:
                 error: Invalid or expired token
+
+    NotAcceptable:
+      description: >-
+        The Accept header rules out application/json, the only media type the
+        API produces. Reported as JSON regardless, having nothing else to write
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Only application/json can be produced
+
+    UnsupportedMediaType:
+      description: >-
+        The request carries a body announced as something other than
+        application/json, or announced as nothing at all
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Content-Type must be application/json
 
     Forbidden:
       description: The caller lacks permissions or quota to perform this action

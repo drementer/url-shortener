@@ -5,6 +5,7 @@ import roleRoutes from './role';
 import userRoutes from './user';
 import statusRoutes from './status';
 import handleRedirect from '../controllers/redirect';
+import jsonOnly from '../middlewares/json-only';
 import { rateLimits } from '../middlewares/rate-limit';
 
 const router = express.Router();
@@ -25,8 +26,10 @@ v1.use('/users', userRoutes);
  * Uptime monitors and container probes point here once and are never told
  * about an API version, so the health check stays outside the prefix.
  */
-router.use('/health', statusRoutes);
-router.use('/api/v1', v1);
+router.use('/health', jsonOnly, statusRoutes);
+router.use('/api/v1', jsonOnly, v1);
+
+// Left out of jsonOnly: a browser is answered with a 302, not a representation
 router.get('/:code', rateLimits.general, handleRedirect);
 
 export default router;

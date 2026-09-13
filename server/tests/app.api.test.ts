@@ -130,6 +130,91 @@ describe('a body the parser refuses', () => {
   });
 });
 
+describe('media type of the request', () => {
+  const post = (headers: Record<string, string>) =>
+    fetch(`${baseUrl}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `10.2.4.${++clientCount}`, ...headers },
+      body: JSON.stringify({ email: 'a@example.com', password: 'Passw0rd!' }),
+    });
+
+  it('answers 415 for a body announced as another type', async () => {
+    const response = await post({ 'content-type': 'text/plain' });
+
+    // Without this the parser would skip the body and a field would look absent
+    expect(response.status).toBe(415);
+    expect(await response.json()).toEqual({
+      error: 'Content-Type must be application/json',
+    });
+  });
+
+  it('answers 415 for a body that announces no type at all', async () => {
+    const response = await post({});
+
+    expect(response.status).toBe(415);
+  });
+
+  it('reads a body sent with a charset on the type', async () => {
+    const response = await post({
+      'content-type': 'application/json; charset=utf-8',
+    });
+
+    expect(response.status).not.toBe(415);
+  });
+
+  it('lets a request carrying no body through to its own handler', async () => {
+    const response = await fetch(`${baseUrl}/api/v1/urls`, {
+      method: 'DELETE',
+      headers: { 'x-forwarded-for': `10.2.5.${++clientCount}` },
+    });
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('media type of the response', () => {
+  it('answers 406 when the client rules out JSON', async () => {
+    const response = await get('/api/v1/urls', { accept: 'text/csv' });
+
+    expect(response.status).toBe(406);
+    // Reported as JSON regardless: it is the only thing the API can write
+    expect(await response.json()).toEqual({
+      error: 'Only application/json can be produced',
+    });
+  });
+
+  it('negotiates the health check too, sitting outside the version prefix', async () => {
+    const response = await get('/health', { accept: 'text/csv' });
+
+    expect(response.status).toBe(406);
+  });
+
+  it('serves a client that accepts anything', async () => {
+    const response = await get('/health', { accept: '*/*' });
+
+    expect(response.status).toBe(200);
+  });
+
+  it('never varies by Accept, so it says so to no cache', async () => {
+    const response = await get('/health', { accept: 'application/json' });
+
+    expect(response.headers.get('vary') ?? '').not.toContain('Accept');
+  });
+
+  it('leaves the redirect surface out of the negotiation', async () => {
+    // A browser asks for HTML and must still be redirected, not refused
+    const response = await fetch(`${baseUrl}/an-unknown-code`, {
+      redirect: 'manual',
+      headers: {
+        accept: 'text/html,application/xhtml+xml',
+        'x-forwarded-for': `10.2.6.${++clientCount}`,
+      },
+    });
+
+    expect(response.status).toBe(302);
+  });
+});
+
 describe('authentication guard', () => {
   const paths = [
     { method: 'GET', path: '/api/v1/urls' },
