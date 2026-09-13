@@ -195,7 +195,7 @@ already taken answers `409`:
 { "error": "This custom slug is already in use" }
 ```
 
-Reserved slugs: `api`, `404`, `expired`, `stats`.
+Reserved slugs: `api`, `404`, `expired`, `health`, `stats`.
 
 ### List All URLs
 

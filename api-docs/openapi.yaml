@@ -869,7 +869,7 @@ components:
           description: >-
             Preferred short code. Letters, numbers, hyphen and underscore only.
             An empty string is treated as not provided. The values api, 404,
-            expired and stats are reserved.
+            expired, health and stats are reserved.
           minLength: 3
           maxLength: 32
           pattern: '^[A-Za-z0-9_-]+$'
