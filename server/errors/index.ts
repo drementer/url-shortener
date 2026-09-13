@@ -33,6 +33,23 @@ class UnauthorizedError extends AppError {
   }
 }
 
+/**
+ * The request declares a body in a format the API does not read. Every write
+ * endpoint takes application/json and nothing else.
+ */
+class UnsupportedMediaTypeError extends AppError {
+  constructor(message = 'Content-Type must be application/json') {
+    super(message, 415);
+  }
+}
+
+/** The client rules out the only media type the API produces */
+class NotAcceptableError extends AppError {
+  constructor(message = 'Only application/json can be produced') {
+    super(message, 406);
+  }
+}
+
 class NotFoundError extends AppError {
   constructor(message = 'Not found') {
     super(message, 404);
@@ -76,6 +93,8 @@ export {
   ForbiddenError,
   QuotaExceededError,
   NotFoundError,
+  NotAcceptableError,
+  UnsupportedMediaTypeError,
   ConflictError,
   UniqueConstraintError,
 };
