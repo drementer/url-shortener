@@ -1,9 +1,12 @@
 import {
+  changePassword,
   findCurrentUser,
   login,
   logout,
   refresh,
   register,
+  requestPasswordReset,
+  resetPassword,
 } from '../use-cases/auth';
 import { UnauthorizedError } from '../errors';
 import { currentUser } from '../middlewares/auth';
@@ -42,6 +45,32 @@ const authController = {
     await logout(req.body.refreshToken);
 
     res.status(204).end();
+  },
+
+  async forgotPassword(req: Request, res: Response) {
+    await requestPasswordReset(req.body.email);
+
+    // Answered the same way whether or not the address is registered, so the
+    // endpoint cannot be used to find out which addresses have an account
+    res.status(202).end();
+  },
+
+  async resetPassword(req: Request, res: Response) {
+    await resetPassword(req.body);
+
+    res.status(204).end();
+  },
+
+  async changePassword(req: Request, res: Response) {
+    const session = await changePassword(
+      currentUser(req).id,
+      req.body,
+      sessionContext(req),
+    );
+
+    // The change revoked every session, including the one this request came
+    // from, so the caller is handed the pair replacing it
+    res.json(toSessionResponse(session));
   },
 
   async me(req: Request, res: Response) {

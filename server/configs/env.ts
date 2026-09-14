@@ -18,11 +18,25 @@ const envSchema = z.object({
     .min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  // Reset mail is sent through Resend's HTTP API, so there is no SMTP to configure
+  RESEND_API_KEY: z.string().min(1).optional(),
+  MAIL_FROM: z.string().min(1).default('URL Shortener <onboarding@resend.dev>'),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = envSchema
+  // Without a key no reset mail can leave the process, which is tolerable while
+  // developing (the link is logged instead) but silent breakage in production
+  .refine(
+    (env) => env.NODE_ENV !== 'production' || Boolean(env.RESEND_API_KEY),
+    {
+      path: ['RESEND_API_KEY'],
+      error: 'RESEND_API_KEY is required in production',
+    },
+  )
+  .safeParse(process.env);
 
 if (!parsed.success) {
   console.error(

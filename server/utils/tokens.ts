@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { createHash, randomBytes } from 'node:crypto';
 import { env } from '../configs/env';
 
-const REFRESH_TOKEN_BYTES = 48;
+const OPAQUE_TOKEN_BYTES = 48;
 
 type AccessTokenPayload = {
   sub: string;
@@ -33,21 +33,33 @@ const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   }
 };
 
-const createRefreshToken = () =>
-  randomBytes(REFRESH_TOKEN_BYTES).toString('hex');
+/**
+ * The secrets the server hands out and later recognises by value: refresh
+ * tokens and password reset tokens. Both are opaque to the client and carry no
+ * payload, so the same pair of helpers mints and recognises them.
+ */
+const createOpaqueToken = () => randomBytes(OPAQUE_TOKEN_BYTES).toString('hex');
 
 /**
- * Refresh tokens are stored as a hash, so a leaked database cannot be replayed.
- * A plain SHA-256 is enough here, unlike for a password: the token is 48 random
- * bytes, which no amount of guessing gets through.
+ * Stored as a hash, so a leaked database cannot be replayed. A plain SHA-256 is
+ * enough here, unlike for a password: the token is 48 random bytes, which no
+ * amount of guessing gets through.
  */
-const hashRefreshToken = (token: string) =>
+const hashOpaqueToken = (token: string) =>
   createHash('sha256').update(token).digest('hex');
+
+const createRefreshToken = () => createOpaqueToken();
+const hashRefreshToken = (token: string) => hashOpaqueToken(token);
+
+const createResetToken = () => createOpaqueToken();
+const hashResetToken = (token: string) => hashOpaqueToken(token);
 
 export {
   createAccessToken,
   verifyAccessToken,
   createRefreshToken,
   hashRefreshToken,
+  createResetToken,
+  hashResetToken,
 };
 export type { AccessTokenPayload };
