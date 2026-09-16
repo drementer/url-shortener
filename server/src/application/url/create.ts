@@ -9,6 +9,7 @@ import { createShortCode } from '../../domain/short-code';
 import { ConflictError, UniqueConstraintError } from '../../domain/errors';
 import { SLUG_TAKEN } from './messages';
 import type { NewUrl } from '../../domain/types';
+import type { UrlQuotaOptions } from '../ports';
 
 const MAX_RETRIES = 5;
 
@@ -28,7 +29,7 @@ type UnnamedUrl = Omit<NewUrl, 'shortCode' | 'customSlug'>;
  */
 const allocateShortCode = async (
   url: UnnamedUrl,
-  quota?: { maxActiveLinks?: number | null; roleName?: string },
+  quota?: UrlQuotaOptions,
 ) => {
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
@@ -55,7 +56,7 @@ const allocateShortCode = async (
 const claimSlug = async (
   url: UnnamedUrl,
   slug: string,
-  quota?: { maxActiveLinks?: number | null; roleName?: string },
+  quota?: UrlQuotaOptions,
 ) => {
   try {
     // customSlug is kept alongside shortCode to record that the user chose it

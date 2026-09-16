@@ -21,16 +21,17 @@ import type {
   Paged,
 } from '../domain/types';
 
-/**
- * Every method carrying a userId scopes its query to that owner, so a link
- * belonging to someone else is indistinguishable from one that does not exist.
- * findByShortCode is the exception: the public redirect has no owner.
- */
+/** The caller's link allowance, as the repository needs it to enforce a quota */
 type UrlQuotaOptions = {
   maxActiveLinks?: number | null;
   roleName?: string;
 };
 
+/**
+ * Every method carrying a userId scopes its query to that owner, so a link
+ * belonging to someone else is indistinguishable from one that does not exist.
+ * findByShortCode is the exception: the public redirect has no owner.
+ */
 type UrlRepository = {
   findAllByUser(userId: string, page: Page): Promise<Paged<UrlWithClickCount>>;
   create(url: NewUrl, quota?: UrlQuotaOptions): Promise<Url>;
