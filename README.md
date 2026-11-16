@@ -38,22 +38,14 @@ url-shortener/
 │   ├── prisma/
 │   │   ├── schema.prisma
 │   │   └── migrations/
-│   ├── routes/             # Route definitions and middleware wiring
-│   ├── controllers/        # Request parsing and response shaping
-│   ├── use-cases/          # One file per use case, wired in each index.ts
-│   ├── domain/             # Link rules, free of storage and transport
-│   ├── repositories/       # Prisma implementations of the storage contracts
-│   ├── mappers/            # Domain to API response mapping
-│   ├── validators/         # Request validation schemas (zod)
-│   ├── middlewares/        # Rate limiting, validation, error handling
-│   ├── errors/             # Domain error types
-│   ├── configs/            # Environment and CORS configuration
-│   ├── utils/
-│   ├── db/                 # Prisma client instance
-│   ├── tests/
-│   ├── types.ts            # Domain shapes and storage contracts
-│   ├── server.ts
-│   └── index.ts
+│   ├── src/
+│   │   ├── domain/         # Rules and shapes, free of storage and transport
+│   │   ├── application/    # One file per use case, plus the storage contracts
+│   │   ├── infrastructure/ # Prisma, repositories, config, crypto
+│   │   ├── presentation/   # Routes, controllers, middlewares, validators, mappers
+│   │   ├── server.ts
+│   │   └── index.ts
+│   └── tests/              # Mirrors the layers, plus api/ for the HTTP surface
 └── client/                 # Frontend (Vue 3)
     ├── CHANGELOG.md        # Client changelog
     └── src/
@@ -311,7 +303,7 @@ cp .env.example .env
 The only value without a sensible default is `JWT_ACCESS_SECRET`; generate one
 with `openssl rand -hex 32`.
 
-These are validated on boot in `server/configs/env.ts`. A missing or malformed
+These are validated on boot in `server/src/infrastructure/config/env.ts`. A missing or malformed
 value stops the process with an explicit message instead of failing later on a
 request.
 

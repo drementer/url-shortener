@@ -43,6 +43,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `/health`, so uptime monitors and container probes survive a version bump;
   `health` joins the reserved slugs, since that route would shadow a link
   claiming it
+- Server sources regrouped under `src/` into four layers (`domain`,
+  `application`, `infrastructure`, `presentation`), so which way a dependency
+  may run is visible from the path; tests mirror the same layers
+- The role check behind `requireRole` moved into an `authorizeRole` use case,
+  so no middleware reaches into a repository
 
 ## [1.0.0] - 2025-12-28
 

@@ -1,10 +1,10 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "type": "module",
   "scripts": {
-    "dev": "bun --watch index.ts",
+    "dev": "bun --watch src/index.ts",
     "build": "rolldown -c rolldown.config.js",
     "start": "bun dist/index.js",
     "test": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && DATABASE_URL=\"file:./test.db\" JWT_ACCESS_SECRET=\"test-secret-not-used-outside-the-test-suite\" bun test"

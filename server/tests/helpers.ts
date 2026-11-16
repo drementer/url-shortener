@@ -1,5 +1,5 @@
-import prisma from '../db/prisma';
-import { ensureDefaultRoles } from '../use-cases/role';
+import prisma from '../src/infrastructure/db/prisma';
+import { ensureDefaultRoles } from '../src/application/role';
 
 /**
  * Every suite shares one SQLite file, so each starts by clearing whatever the
