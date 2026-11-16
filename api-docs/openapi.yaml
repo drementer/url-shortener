@@ -247,6 +247,144 @@ paths:
               example:
                 error: Too many requests, please try again later
 
+  /api/v1/auth/password/forgot:
+    post:
+      summary: Request Password Reset
+      description: >-
+        Mail a reset link to the given address. An address with no account is
+        answered the same way and no mail is sent, since reporting the
+        difference would turn this endpoint into a way to find out which
+        addresses are registered. Any reset already outstanding for the account
+        is retired, so the newest link is the only working one.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '202':
+          description: Request accepted, no content returned
+        '400':
+          description: The email is missing or not a valid address
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: A valid email is required
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
+
+  /api/v1/auth/password/reset:
+    post:
+      summary: Reset Password
+      description: >-
+        Spend a reset token on a new password. The token works once and expires
+        30 minutes after it was issued. Every session the account had open is
+        revoked, so the tokens handed out before the reset stop working.
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password changed, no content returned
+        '400':
+          description: >-
+            The token is unknown, already spent or expired, or the new password
+            does not meet the length rules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Invalid or expired reset token
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
+
+  /api/v1/auth/password:
+    patch:
+      summary: Change Password
+      description: >-
+        Change the password of the signed in account. The current one is asked
+        for again, so a borrowed access token alone cannot take the account
+        over. Every session the account had open is revoked and any reset link
+        still outstanding is retired; the pair in the response replaces the one
+        the request was made with.
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: Password changed, with the session replacing the revoked one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '400':
+          description: >-
+            A field is missing, the new password does not meet the length rules,
+            or it is identical to the current one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: New password must be different from the current one
+        '401':
+          description: The access token is missing or the current password is wrong
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Current password is incorrect
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          description: More than 10 attempts within 15 minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: Too many attempts, please try again later
+
   /api/v1/auth/me:
     get:
       summary: Get Current User
@@ -985,6 +1123,51 @@ components:
           type: string
           description: The refresh token from the last session response
           example: 3f0c1d1e9a7b4c2d8e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Address of the account to reset, trimmed and lowercased
+          example: user@example.com
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+          description: The token carried by the mailed reset link
+          example: 8c4a1f0b7d2e5a9c3f6b1d8e0a7c4f2b5d9e3a6c1f8b0d7e
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: The new password, held to the registration rules
+          example: correct horse battery staple
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          description: >-
+            The password currently on file. Not held to the length rules, so an
+            account created before they tightened can still move off its old one
+          example: correct horse battery staple
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          description: The new password, which must differ from the current one
+          example: a different horse entirely
 
     User:
       type: object

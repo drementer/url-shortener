@@ -10,6 +10,7 @@ const resetDatabase = async () => {
   await prisma.click.deleteMany();
   await prisma.url.deleteMany();
   await prisma.session.deleteMany();
+  await prisma.passwordResetToken.deleteMany();
   await prisma.user.deleteMany();
   await prisma.role.deleteMany();
   await ensureDefaultRoles();

@@ -104,6 +104,19 @@ type NewSession = {
   ip?: string;
 };
 
+type PasswordResetToken = {
+  id: string;
+  userId: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+};
+
+type NewPasswordResetToken = {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+};
+
 type NewClick = {
   urlId: string;
   userAgent?: string;
@@ -125,6 +138,8 @@ export type {
   UpdateRole,
   Session,
   NewSession,
+  PasswordResetToken,
+  NewPasswordResetToken,
   UrlWithClickCount,
   UrlWithClickEvents,
   Page,
