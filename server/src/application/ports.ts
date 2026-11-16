@@ -16,6 +16,8 @@ import type {
   UpdateRole,
   Session,
   NewSession,
+  PasswordResetToken,
+  NewPasswordResetToken,
   NewClick,
   AuditLog,
   NewAuditLog,
@@ -53,7 +55,9 @@ type UserRepository = {
   findById(id: string): Promise<User | null>;
   findByEmail(email: string): Promise<User | null>;
   findByEmailWithPassword(email: string): Promise<UserWithPassword | null>;
+  findByIdWithPassword(id: string): Promise<UserWithPassword | null>;
   updateRole(userId: string, roleId: string | null): Promise<User>;
+  updatePassword(userId: string, passwordHash: string): Promise<User>;
   countByRole(roleId: string): Promise<number>;
 };
 
@@ -80,6 +84,17 @@ type SessionRepository = {
   ): Promise<Session | null>;
 };
 
+type PasswordResetRepository = {
+  create(token: NewPasswordResetToken): Promise<PasswordResetToken>;
+  findByTokenHash(tokenHash: string): Promise<PasswordResetToken | null>;
+  /**
+   * Retires the token and sets the password it was issued for, in one step.
+   * Answers with the number of tokens actually spent, so at most one.
+   */
+  spend(id: string, userId: string, passwordHash: string): Promise<number>;
+  invalidateAllForUser(userId: string): Promise<unknown>;
+};
+
 type ClickRepository = {
   create(click: NewClick): Promise<unknown>;
 };
@@ -96,6 +111,7 @@ export type {
   UserRepository,
   RoleRepository,
   SessionRepository,
+  PasswordResetRepository,
   ClickRepository,
   AuditLogRepository,
 };

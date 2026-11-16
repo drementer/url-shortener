@@ -63,10 +63,26 @@ const userRepository: UserRepository = {
     });
   },
 
+  // Carries the password hash, so it is only for verifying a password change
+  async findByIdWithPassword(id) {
+    return await prisma.user.findUnique({
+      where: { id },
+      select: { ...publicFields, passwordHash: true },
+    });
+  },
+
   async updateRole(userId, roleId) {
     return await prisma.user.update({
       where: { id: userId },
       data: { roleId },
+      select: publicFields,
+    });
+  },
+
+  async updatePassword(userId, passwordHash) {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
       select: publicFields,
     });
   },
