@@ -7,8 +7,10 @@ import {
 } from '../../domain/role';
 import { createShortCode } from '../../domain/short-code';
 import { ConflictError, UniqueConstraintError } from '../../domain/errors';
+import { AUDIT_ACTIONS } from '../../domain/audit';
+import { recordAuditEvent } from '../audit';
 import { SLUG_TAKEN } from './messages';
-import type { NewUrl } from '../../domain/types';
+import type { AuditActor, NewUrl } from '../../domain/types';
 import type { UrlQuotaOptions } from '../ports';
 
 const MAX_RETRIES = 5;
@@ -79,6 +81,7 @@ const claimSlug = async (
 const createUrl = async (
   { url, customSlug, expiresIn }: CreateUrlCommand,
   userId: string,
+  actor?: AuditActor,
 ) => {
   const user = await userRepository.findById(userId);
   const roleName = user?.role?.name ?? DEFAULT_ROLE_NAME;
@@ -90,15 +93,36 @@ const createUrl = async (
   const quota = { maxActiveLinks, roleName };
   const row = { originalUrl: url, expiresAt: resolveExpiry(expiresIn), userId };
 
+  let created;
   if (!customSlug) {
-    return await allocateShortCode(row, quota);
+    created = await allocateShortCode(row, quota);
+  } else {
+    // Early check so a taken slug fails before hitting the unique constraint
+    const existingUrl = await urlRepository.findByShortCode(customSlug);
+    if (existingUrl) throw new ConflictError(SLUG_TAKEN);
+
+    created = await claimSlug(row, customSlug, quota);
   }
 
-  // Early check so a taken slug fails before hitting the unique constraint
-  const existingUrl = await urlRepository.findByShortCode(customSlug);
-  if (existingUrl) throw new ConflictError(SLUG_TAKEN);
+  await recordAuditEvent({
+    action: AUDIT_ACTIONS.URL_CREATED,
+    actorId: actor?.id ?? userId,
+    actorEmail: actor?.email ?? user?.email,
+    targetType: 'Url',
+    targetId: created.id,
+    metadata: {
+      shortCode: created.shortCode,
+      originalUrl: created.originalUrl,
+      ...(created.customSlug ? { customSlug: created.customSlug } : {}),
+      ...(created.expiresAt
+        ? { expiresAt: created.expiresAt.toISOString() }
+        : {}),
+    },
+    ip: actor?.ip,
+    userAgent: actor?.userAgent,
+  });
 
-  return await claimSlug(row, customSlug, quota);
+  return created;
 };
 
 export { createUrl };

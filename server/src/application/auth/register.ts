@@ -1,6 +1,8 @@
 import userRepository from '../../infrastructure/repositories/user';
 import { ConflictError, UniqueConstraintError } from '../../domain/errors';
 import { hashPassword } from '../../infrastructure/crypto/password';
+import { AUDIT_ACTIONS } from '../../domain/audit';
+import { recordAuditEvent } from '../audit';
 import { startSession } from './session';
 import type { Credentials, SessionContext } from './types';
 
@@ -34,8 +36,19 @@ const register = async (
   if (existing) throw new ConflictError(EMAIL_TAKEN);
 
   const user = await createUser(email, password);
+  const session = await startSession(user, context);
 
-  return await startSession(user, context);
+  await recordAuditEvent({
+    action: AUDIT_ACTIONS.AUTH_REGISTER,
+    actorId: user.id,
+    actorEmail: user.email,
+    targetType: 'User',
+    targetId: user.id,
+    ip: context.ip,
+    userAgent: context.userAgent,
+  });
+
+  return session;
 };
 
 export { register };

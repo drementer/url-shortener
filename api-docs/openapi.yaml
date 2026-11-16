@@ -34,6 +34,8 @@ tags:
     description: Role and quota management endpoints (Admin only)
   - name: Users
     description: User administration endpoints (Admin only)
+  - name: Audit Logs
+    description: Append-only security and admin audit trail endpoints (Admin only)
   - name: Redirect
     description: URL redirection endpoint
 
@@ -886,6 +888,72 @@ paths:
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
 
+  /api/v1/audit-logs:
+    get:
+      summary: List Audit Logs
+      description: >-
+        Retrieve one page of append-only security and admin audit trail entries,
+        ordered newest first. Requires ADMIN role.
+      tags: [Audit Logs]
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Audit log entries per page
+        - in: query
+          name: action
+          schema:
+            type: string
+          description: Filter by canonical action name (e.g. role.created, auth.login.failed)
+          example: role.created
+        - in: query
+          name: actorId
+          schema:
+            type: string
+          description: Filter by acting user ID
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive start timestamp (ISO 8601)
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive end timestamp (ISO 8601)
+      responses:
+        '200':
+          description: Successfully retrieved one page of audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAuditLogs'
+        '400':
+          description: Invalid pagination or filter query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+
   /{code}:
     get:
       summary: Redirect to Original URL
@@ -1379,3 +1447,94 @@ components:
           nullable: true
           description: UUID of the role to assign to the user (null to unassign role)
           example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
+
+    AuditLog:
+      type: object
+      required:
+        - id
+        - action
+        - actorId
+        - actorEmail
+        - targetType
+        - targetId
+        - metadata
+        - ip
+        - userAgent
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique audit entry identifier (UUID)
+          example: 4e3f8a9b-1c2d-4a5b-9e0f-7a8b9c0d1e2f
+        action:
+          type: string
+          description: Canonical audit action identifier
+          example: role.created
+        actorId:
+          type: string
+          nullable: true
+          description: ID of the acting user, or null for anonymous/failed attempts
+          example: clxyz123abc456def
+        actorEmail:
+          type: string
+          nullable: true
+          description: Denormalized email of the actor or attempted login email
+          example: admin@example.com
+        targetType:
+          type: string
+          nullable: true
+          description: Resource type affected by the action
+          example: Role
+        targetId:
+          type: string
+          nullable: true
+          description: Identifier of the affected resource
+          example: a91b7c2d-4e3f-4a5b-8c6d-7e8f9a0b1c2d
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Structured action details
+          example:
+            name: VIP
+            maxActiveLinks: 50
+        ip:
+          type: string
+          nullable: true
+          description: Client IP address recorded at the time of the event
+          example: 203.0.113.10
+        userAgent:
+          type: string
+          nullable: true
+          description: Client User-Agent header recorded at the time of the event
+          example: Mozilla/5.0
+        createdAt:
+          type: string
+          format: date-time
+          description: Event timestamp
+          example: '2026-09-01T12:00:00Z'
+
+    PagedAuditLogs:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        meta:
+          type: object
+          required: [page, limit, total, totalPages]
+          properties:
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 20
+            total:
+              type: integer
+              example: 42
+            totalPages:
+              type: integer
+              example: 3

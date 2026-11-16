@@ -7,6 +7,7 @@ import {
   deleteRole,
 } from '../../application/role';
 import { toRoleResponse } from '../mappers/role';
+import { actorContext } from '../middlewares/auth';
 
 const roleController = {
   async findAll(req: Request, res: Response) {
@@ -21,7 +22,7 @@ const roleController = {
   },
 
   async create(req: Request, res: Response) {
-    const role = await createRole(req.body);
+    const role = await createRole(req.body, actorContext(req));
     res
       .location(`/api/v1/roles/${role.id}`)
       .status(201)
@@ -30,13 +31,13 @@ const roleController = {
 
   async update(req: Request, res: Response) {
     const id = req.params.id as string;
-    const role = await updateRole(id, req.body);
+    const role = await updateRole(id, req.body, actorContext(req));
     res.json(toRoleResponse(role));
   },
 
   async remove(req: Request, res: Response) {
     const id = req.params.id as string;
-    await deleteRole(id);
+    await deleteRole(id, actorContext(req));
 
     res.status(204).end();
   },

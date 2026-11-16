@@ -42,7 +42,7 @@ const authController = {
   },
 
   async logout(req: Request, res: Response) {
-    await logout(req.body.refreshToken);
+    await logout(req.body.refreshToken, sessionContext(req));
 
     res.status(204).end();
   },

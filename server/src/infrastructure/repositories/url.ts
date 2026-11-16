@@ -85,6 +85,12 @@ const urlRepository: UrlRepository = {
     });
   },
 
+  async findOwned(shortCode, userId) {
+    return await prisma.url.findFirst({
+      where: { shortCode, userId },
+    });
+  },
+
   async findOwnedWithClicks(shortCode, userId) {
     return await prisma.url.findFirst({
       where: { shortCode, userId },

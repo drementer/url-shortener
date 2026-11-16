@@ -35,7 +35,7 @@ describe('notFoundHandler', () => {
 describe('errorHandler', () => {
   const run = (error: unknown, headersSent = false) => {
     const { res, sent } = recorder(headersSent);
-    const next = mock<NextFunction>(() => {});
+    const next = mock(() => {}) as unknown as NextFunction;
 
     errorHandler(error, {} as Request, res, next);
 

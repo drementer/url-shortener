@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/audit-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("AUDIT_DATABASE_URL")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  actorId    String?
+  actorEmail String?
+  targetType String?
+  targetId   String?
+  metadata   String?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+}

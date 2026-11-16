@@ -19,6 +19,9 @@ import type {
   PasswordResetToken,
   NewPasswordResetToken,
   NewClick,
+  AuditLog,
+  NewAuditLog,
+  AuditLogFilter,
   Page,
   Paged,
 } from '../domain/types';
@@ -38,6 +41,7 @@ type UrlRepository = {
   findAllByUser(userId: string, page: Page): Promise<Paged<UrlWithClickCount>>;
   create(url: NewUrl, quota?: UrlQuotaOptions): Promise<Url>;
   findByShortCode(shortCode: string): Promise<Url | null>;
+  findOwned(shortCode: string, userId: string): Promise<Url | null>;
   findOwnedWithClicks(
     shortCode: string,
     userId: string,
@@ -95,6 +99,12 @@ type ClickRepository = {
   create(click: NewClick): Promise<unknown>;
 };
 
+/** Append-only audit trail: updates and deletes do not exist on the port */
+type AuditLogRepository = {
+  create(entry: NewAuditLog): Promise<AuditLog>;
+  findAll(filter: AuditLogFilter, page: Page): Promise<Paged<AuditLog>>;
+};
+
 export type {
   UrlQuotaOptions,
   UrlRepository,
@@ -103,4 +113,5 @@ export type {
   SessionRepository,
   PasswordResetRepository,
   ClickRepository,
+  AuditLogRepository,
 };

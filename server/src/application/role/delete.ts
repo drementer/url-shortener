@@ -1,7 +1,10 @@
 import roleRepository from '../../infrastructure/repositories/role';
 import userRepository from '../../infrastructure/repositories/user';
 import { ADMIN_ROLE_NAME } from '../../domain/role';
+import { AUDIT_ACTIONS } from '../../domain/audit';
 import { NotFoundError, ConflictError, BadRequestError } from '../../domain/errors';
+import { recordAuditEvent } from '../audit';
+import type { AuditActor } from '../../domain/types';
 
 /**
  * Removes a role, provided nothing depends on it.
@@ -11,7 +14,7 @@ import { NotFoundError, ConflictError, BadRequestError } from '../../domain/erro
  * held by someone is refused because dropping it would silently strip those
  * accounts of their link quota.
  */
-const deleteRole = async (id: string) => {
+const deleteRole = async (id: string, actor: AuditActor) => {
   const role = await roleRepository.findById(id);
   if (!role) {
     throw new NotFoundError('Role not found');
@@ -22,7 +25,21 @@ const deleteRole = async (id: string) => {
   }
 
   const deleted = await roleRepository.deleteIfUnassigned(id);
-  if (deleted) return;
+  if (deleted) {
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.ROLE_DELETED,
+      actorId: actor.id,
+      actorEmail: actor.email,
+      targetType: 'Role',
+      targetId: role.id,
+      metadata: {
+        name: role.name,
+      },
+      ip: actor.ip,
+      userAgent: actor.userAgent,
+    });
+    return;
+  }
 
   // The delete refused, so the role is spoken for. Counting afterwards only
   // shapes the message; the decision was made by the conditional delete. The

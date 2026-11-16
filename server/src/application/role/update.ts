@@ -1,6 +1,9 @@
 import roleRepository from '../../infrastructure/repositories/role';
 import { ADMIN_ROLE_NAME } from '../../domain/role';
+import { AUDIT_ACTIONS } from '../../domain/audit';
 import { NotFoundError, ConflictError, BadRequestError } from '../../domain/errors';
+import { recordAuditEvent } from '../audit';
+import type { AuditActor } from '../../domain/types';
 
 type UpdateRoleCommand = {
   name?: string;
@@ -8,7 +11,11 @@ type UpdateRoleCommand = {
   maxActiveLinks?: number | null;
 };
 
-const updateRole = async (id: string, command: UpdateRoleCommand) => {
+const updateRole = async (
+  id: string,
+  command: UpdateRoleCommand,
+  actor: AuditActor,
+) => {
   const existing = await roleRepository.findById(id);
   if (!existing) {
     throw new NotFoundError(`Role not found`);
@@ -41,7 +48,23 @@ const updateRole = async (id: string, command: UpdateRoleCommand) => {
     data.maxActiveLinks = command.maxActiveLinks;
   }
 
-  return await roleRepository.update(id, data);
+  const updated = await roleRepository.update(id, data);
+
+  await recordAuditEvent({
+    action: AUDIT_ACTIONS.ROLE_UPDATED,
+    actorId: actor.id,
+    actorEmail: actor.email,
+    targetType: 'Role',
+    targetId: updated.id,
+    metadata: {
+      name: updated.name,
+      changes: data,
+    },
+    ip: actor.ip,
+    userAgent: actor.userAgent,
+  });
+
+  return updated;
 };
 
 export { updateRole };

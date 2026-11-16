@@ -3,6 +3,7 @@ import urlRoutes from './url';
 import authRoutes from './auth';
 import roleRoutes from './role';
 import userRoutes from './user';
+import auditLogRoutes from './audit-log';
 import statusRoutes from './status';
 import handleRedirect from '../controllers/redirect';
 import jsonOnly from '../middlewares/json-only';
@@ -21,6 +22,7 @@ v1.use('/auth', authRoutes);
 v1.use('/urls', urlRoutes);
 v1.use('/roles', roleRoutes);
 v1.use('/users', userRoutes);
+v1.use('/audit-logs', auditLogRoutes);
 
 /**
  * Uptime monitors and container probes point here once and are never told
