@@ -39,6 +39,7 @@ type UrlRepository = {
   findAllByUser(userId: string, page: Page): Promise<Paged<UrlWithClickCount>>;
   create(url: NewUrl, quota?: UrlQuotaOptions): Promise<Url>;
   findByShortCode(shortCode: string): Promise<Url | null>;
+  findOwned(shortCode: string, userId: string): Promise<Url | null>;
   findOwnedWithClicks(
     shortCode: string,
     userId: string,

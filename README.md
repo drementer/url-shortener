@@ -108,11 +108,12 @@ Run the server test suite from the server directory:
 
 ```bash
 cd server
-bun test
+bun run test
 ```
 
-The suite creates a throwaway SQLite database (`prisma/test.db`) and migrates it
-from scratch on every run, so it never touches development data.
+The suite creates throwaway SQLite databases (`prisma/test.db` and
+`prisma-audit/audit-test.db`) and migrates them from scratch on every run, so it
+never touches development data.
 
 ## API Reference
 

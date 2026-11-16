@@ -3,6 +3,16 @@ import { z } from 'zod';
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
+const dateQueryParam = (label: string) =>
+  z
+    .string(`${label} must be a valid date`)
+    .trim()
+    .refine(
+      (value) => !/^-?\d+(\.\d+)?$/.test(value) && !Number.isNaN(Date.parse(value)),
+      { message: `${label} must be a valid date` },
+    )
+    .transform((value) => new Date(value));
+
 /**
  * Query strings arrive as text, so pagination bounds and date filters are
  * coerced before being passed to the repository.
@@ -22,8 +32,8 @@ const listAuditLogsQuerySchema = z
       .default(DEFAULT_PAGE_SIZE),
     action: z.string().trim().min(1, 'action must not be empty').optional(),
     actorId: z.string().trim().min(1, 'actorId must not be empty').optional(),
-    from: z.coerce.date('from must be a valid date').optional(),
-    to: z.coerce.date('to must be a valid date').optional(),
+    from: dateQueryParam('from').optional(),
+    to: dateQueryParam('to').optional(),
   })
   .refine(({ from, to }) => !from || !to || from <= to, {
     message: 'from must not be after to',

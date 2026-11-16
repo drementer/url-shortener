@@ -35,6 +35,12 @@ describe('listAuditLogsQuerySchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects numeric-only or empty date filters', () => {
+    expect(listAuditLogsQuerySchema.safeParse({ from: '0' }).success).toBe(false);
+    expect(listAuditLogsQuerySchema.safeParse({ from: '12345' }).success).toBe(false);
+    expect(listAuditLogsQuerySchema.safeParse({ to: '' }).success).toBe(false);
+  });
+
   it('rejects a range where from is after to', () => {
     const result = listAuditLogsQuerySchema.safeParse({
       from: '2026-09-10T00:00:00Z',

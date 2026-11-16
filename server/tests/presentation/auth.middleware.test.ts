@@ -19,7 +19,7 @@ const request = (authorization?: string) =>
 
 const run = (authorization?: string) => {
   const req = request(authorization);
-  const next = mock<NextFunction>(() => {});
+  const next = mock(() => {}) as unknown as NextFunction;
 
   requireAuth(req, {} as Response, next);
 
@@ -56,7 +56,7 @@ describe('requireAuth', () => {
 
   it('leaves the request untouched when it rejects', () => {
     const req = request('Bearer not-a-real-token');
-    const next = mock<NextFunction>(() => {});
+    const next = mock(() => {}) as unknown as NextFunction;
 
     expect(() => requireAuth(req, {} as Response, next)).toThrow();
     expect(req.user).toBeUndefined();

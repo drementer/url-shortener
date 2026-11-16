@@ -7,7 +7,9 @@ import type { AuditActor } from '../../domain/types';
 
 /** Removes a link, provided the caller is the one who owns it */
 const deleteUrl = async (code: string, userId: string, actor?: AuditActor) => {
-  const existing = await urlRepository.findByShortCode(code);
+  const existing = await urlRepository.findOwned(code, userId);
+  if (!existing) throw new NotFoundError(URL_NOT_FOUND);
+
   const deletedCount = await urlRepository.deleteOwned(code, userId);
   if (!deletedCount) throw new NotFoundError(URL_NOT_FOUND);
 
@@ -16,10 +18,10 @@ const deleteUrl = async (code: string, userId: string, actor?: AuditActor) => {
     actorId: actor?.id ?? userId,
     actorEmail: actor?.email,
     targetType: 'Url',
-    targetId: existing?.id ?? code,
+    targetId: existing.id,
     metadata: {
       shortCode: code,
-      ...(existing ? { originalUrl: existing.originalUrl } : {}),
+      originalUrl: existing.originalUrl,
     },
     ip: actor?.ip,
     userAgent: actor?.userAgent,

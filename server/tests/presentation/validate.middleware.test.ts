@@ -11,7 +11,7 @@ const schema = z.object({
 
 const run = (body: unknown) => {
   const req = { body } as Request;
-  const next = mock<NextFunction>(() => {});
+  const next = mock(() => {}) as unknown as NextFunction;
 
   validateBody(schema)(req, {} as Response, next);
 
@@ -41,7 +41,7 @@ describe('validateBody', () => {
 
   it('does not hand a rejected body on', () => {
     const req = { body: { name: 'a' } } as Request;
-    const next = mock<NextFunction>(() => {});
+    const next = mock(() => {}) as unknown as NextFunction;
 
     expect(() =>
       validateBody(schema)(req, {} as Response, next),

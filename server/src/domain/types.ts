@@ -5,6 +5,8 @@
  * database schema cannot silently reshape the API.
  */
 
+import type { AuditAction } from './audit';
+
 type Url = {
   id: string;
   shortCode: string;
@@ -132,7 +134,7 @@ type AuditLog = {
 };
 
 type NewAuditLog = {
-  action: string;
+  action: AuditAction;
   actorId?: string | null;
   actorEmail?: string | null;
   targetType?: string | null;

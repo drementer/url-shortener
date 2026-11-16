@@ -7,12 +7,12 @@ import { listAuditLogsQuerySchema } from '../validators/audit-log';
 
 const router = express.Router();
 
+router.use(rateLimits.general);
 router.use(requireAuth);
 router.use(requireRole('ADMIN'));
 
 router.get(
   '/',
-  rateLimits.general,
   validateQuery(listAuditLogsQuerySchema),
   auditLogController.findAll,
 );

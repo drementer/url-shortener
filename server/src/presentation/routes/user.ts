@@ -7,13 +7,13 @@ import { assignRoleSchema } from '../validators/user';
 
 const router = express.Router();
 
+router.use(rateLimits.general);
 router.use(requireAuth);
 router.use(requireRole('ADMIN'));
 
 // A role is a sub-resource of the user, and the body replaces it outright
 router.put(
   '/:id/role',
-  rateLimits.general,
   validateBody(assignRoleSchema),
   userController.setRole,
 );
