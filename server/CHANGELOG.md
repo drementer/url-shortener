@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `authAttempt` rate limit of 10 requests per 15 minutes on the credential routes
 - Refresh tokens are consumed atomically, so two requests holding the same token
   cannot both walk away with a valid session
+- Append-only `AuditLog` stored in a dedicated Prisma SQLite database
+  (`prisma-audit/schema.prisma`, configured via `AUDIT_DATABASE_URL`) recording
+  authentication events (`auth.register`, `auth.login.succeeded`,
+  `auth.login.failed`, `auth.logout`, `auth.refresh.reused`,
+  `auth.access.denied`), admin role changes (`role.created`, `role.updated`,
+  `role.deleted`, `user.role.assigned`), URL lifecycle events (`url.created`,
+  `url.deleted`), and audit log views (`audit.logs.viewed`) without failing
+  requests if an audit write errors
+- `GET /api/v1/audit-logs` admin-only endpoint with pagination and `action`,
+  `actorId`, `from`, and `to` filters
 
 ### Changed
 

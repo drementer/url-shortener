@@ -1,6 +1,8 @@
 import roleRepository from '../../infrastructure/repositories/role';
 import { ConflictError } from '../../domain/errors';
-import type { NewRole } from '../../domain/types';
+import { AUDIT_ACTIONS } from '../../domain/audit';
+import { recordAuditEvent } from '../audit';
+import type { AuditActor } from '../../domain/types';
 
 type CreateRoleCommand = {
   name: string;
@@ -8,11 +10,10 @@ type CreateRoleCommand = {
   maxActiveLinks?: number | null;
 };
 
-const createRole = async ({
-  name,
-  description,
-  maxActiveLinks,
-}: CreateRoleCommand) => {
+const createRole = async (
+  { name, description, maxActiveLinks }: CreateRoleCommand,
+  actor: AuditActor,
+) => {
   const normalizedName = name.trim().toUpperCase();
 
   const existing = await roleRepository.findByName(normalizedName);
@@ -20,11 +21,27 @@ const createRole = async ({
     throw new ConflictError(`Role with name '${normalizedName}' already exists`);
   }
 
-  return await roleRepository.create({
+  const role = await roleRepository.create({
     name: normalizedName,
     description: description ?? null,
     maxActiveLinks: maxActiveLinks ?? null,
   });
+
+  await recordAuditEvent({
+    action: AUDIT_ACTIONS.ROLE_CREATED,
+    actorId: actor.id,
+    actorEmail: actor.email,
+    targetType: 'Role',
+    targetId: role.id,
+    metadata: {
+      name: role.name,
+      maxActiveLinks: role.maxActiveLinks,
+    },
+    ip: actor.ip,
+    userAgent: actor.userAgent,
+  });
+
+  return role;
 };
 
 export { createRole };

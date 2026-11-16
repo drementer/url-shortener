@@ -1,5 +1,9 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { requireAuth, currentUser } from '../../src/presentation/middlewares/auth';
+import {
+  requireAuth,
+  currentUser,
+  actorContext,
+} from '../../src/presentation/middlewares/auth';
 import { UnauthorizedError } from '../../src/domain/errors';
 import { createAccessToken } from '../../src/infrastructure/crypto/tokens';
 import type { Request, Response, NextFunction } from 'express';
@@ -70,5 +74,28 @@ describe('currentUser', () => {
   it('throws rather than treating a missing guard as a guest', () => {
     // A route that forgets requireAuth must fail, not run as if signed out
     expect(() => currentUser({} as Request)).toThrow(UnauthorizedError);
+  });
+});
+
+describe('actorContext', () => {
+  it('combines the authenticated user with ip and user-agent', () => {
+    const req = {
+      user: { id: 'user-1', email: USER.email },
+      ip: '198.51.100.4',
+      get: (name: string) =>
+        name.toLowerCase() === 'user-agent' ? 'test-agent' : undefined,
+    } as unknown as Request;
+
+    expect(actorContext(req)).toEqual({
+      id: 'user-1',
+      email: USER.email,
+      ip: '198.51.100.4',
+      userAgent: 'test-agent',
+    });
+  });
+
+  it('throws UnauthorizedError when req.user is missing', () => {
+    const req = { get: () => undefined } as unknown as Request;
+    expect(() => actorContext(req)).toThrow(UnauthorizedError);
   });
 });

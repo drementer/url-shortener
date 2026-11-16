@@ -1,6 +1,7 @@
 import { UnauthorizedError } from '../../domain/errors';
 import { verifyAccessToken } from '../../infrastructure/crypto/tokens';
 import { authorizeRole } from '../../application/auth';
+import type { AuditActor } from '../../domain/types';
 import type { Request, Response, NextFunction } from 'express';
 
 const BEARER_PREFIX = 'Bearer ';
@@ -36,11 +37,29 @@ const currentUser = (req: Request) => {
   return req.user;
 };
 
+/** Reads the authenticated caller alongside request metadata for audit logging */
+const actorContext = (req: Request): AuditActor => {
+  const user = currentUser(req);
+
+  return {
+    id: user.id,
+    email: user.email,
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+  };
+};
+
 /** Requires the authenticated caller to have one of the specified roles */
 const requireRole = (...allowedRoles: string[]) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await authorizeRole(currentUser(req).id, allowedRoles);
+      const targetPath = `${req.method} ${req.originalUrl.split('?')[0]}`;
+      await authorizeRole(
+        currentUser(req).id,
+        allowedRoles,
+        actorContext(req),
+        targetPath,
+      );
       next();
     } catch (error) {
       next(error);
@@ -48,4 +67,4 @@ const requireRole = (...allowedRoles: string[]) => {
   };
 };
 
-export { requireAuth, currentUser, requireRole };
+export { requireAuth, currentUser, actorContext, requireRole };

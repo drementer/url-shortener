@@ -4,7 +4,7 @@ import {
   findAllUrls,
   getUrlStats,
 } from '../../application/url';
-import { currentUser } from '../middlewares/auth';
+import { actorContext, currentUser } from '../middlewares/auth';
 import {
   toUrlResponse,
   toStatsResponse,
@@ -27,6 +27,7 @@ const urlController = {
     const shortUrl = await createUrl(
       { url, customSlug, expiresIn },
       currentUser(req).id,
+      actorContext(req),
     );
 
     res
@@ -44,7 +45,7 @@ const urlController = {
 
   async remove(req: Request, res: Response) {
     const code = req.params.code as string;
-    await deleteUrl(code, currentUser(req).id);
+    await deleteUrl(code, currentUser(req).id, actorContext(req));
 
     res.status(204).end();
   },

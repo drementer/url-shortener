@@ -111,6 +111,44 @@ type NewClick = {
   ip?: string;
 };
 
+type AuditActor = {
+  id: string;
+  email: string;
+  ip?: string;
+  userAgent?: string;
+};
+
+type AuditLog = {
+  id: string;
+  action: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  metadata: Record<string, unknown> | null;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+};
+
+type NewAuditLog = {
+  action: string;
+  actorId?: string | null;
+  actorEmail?: string | null;
+  targetType?: string | null;
+  targetId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  ip?: string | null;
+  userAgent?: string | null;
+};
+
+type AuditLogFilter = {
+  action?: string;
+  actorId?: string;
+  from?: Date;
+  to?: Date;
+};
+
 export type {
   Url,
   Click,
@@ -129,4 +167,8 @@ export type {
   UrlWithClickEvents,
   Page,
   Paged,
+  AuditActor,
+  AuditLog,
+  NewAuditLog,
+  AuditLogFilter,
 };

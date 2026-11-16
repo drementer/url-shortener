@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "bun --watch src/index.ts",
-    "build": "rolldown -c rolldown.config.js",
+    "build": "prisma generate && prisma generate --schema prisma-audit/schema.prisma && rolldown -c rolldown.config.js",
     "start": "bun dist/index.js",
-    "test": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && DATABASE_URL=\"file:./test.db\" JWT_ACCESS_SECRET=\"test-secret-not-used-outside-the-test-suite\" bun test"
+    "postinstall": "prisma generate && prisma generate --schema prisma-audit/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy && prisma migrate deploy --schema prisma-audit/schema.prisma",
+    "test": "rm -f prisma/test.db prisma-audit/audit-test.db* && DATABASE_URL=\"file:./test.db\" prisma migrate deploy && AUDIT_DATABASE_URL=\"file:./audit-test.db\" prisma migrate deploy --schema prisma-audit/schema.prisma && DATABASE_URL=\"file:./test.db\" AUDIT_DATABASE_URL=\"file:./audit-test.db\" JWT_ACCESS_SECRET=\"test-secret-not-used-outside-the-test-suite\" bun test"
   },
   "keywords": [],
   "author": "",

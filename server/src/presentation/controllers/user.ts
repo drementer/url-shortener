@@ -1,12 +1,17 @@
 import type { Request, Response } from 'express';
 import { assignUserRole } from '../../application/role';
 import { toUserResponse } from '../mappers/auth';
+import { actorContext } from '../middlewares/auth';
 
 const userController = {
   /** Replaces the caller-named user's role outright, or clears it with null */
   async setRole(req: Request, res: Response) {
     const id = req.params.id as string;
-    const updatedUser = await assignUserRole(id, req.body.roleId);
+    const updatedUser = await assignUserRole(
+      id,
+      req.body.roleId,
+      actorContext(req),
+    );
 
     res.json(toUserResponse(updatedUser));
   },

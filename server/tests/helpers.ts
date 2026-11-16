@@ -1,4 +1,5 @@
 import prisma from '../src/infrastructure/db/prisma';
+import auditPrisma from '../src/infrastructure/db/audit';
 import { ensureDefaultRoles } from '../src/application/role';
 
 /**
@@ -7,6 +8,7 @@ import { ensureDefaultRoles } from '../src/application/role';
  * they point at.
  */
 const resetDatabase = async () => {
+  await auditPrisma.auditLog.deleteMany();
   await prisma.click.deleteMany();
   await prisma.url.deleteMany();
   await prisma.session.deleteMany();

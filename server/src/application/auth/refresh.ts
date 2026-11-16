@@ -1,12 +1,14 @@
 import userRepository from '../../infrastructure/repositories/user';
 import sessionRepository from '../../infrastructure/repositories/session';
 import { UnauthorizedError } from '../../domain/errors';
+import { AUDIT_ACTIONS } from '../../domain/audit';
 import { env } from '../../infrastructure/config/env';
 import {
   createAccessToken,
   createRefreshToken,
   hashRefreshToken,
 } from '../../infrastructure/crypto/tokens';
+import { recordAuditEvent } from '../audit';
 import type { SessionContext } from './types';
 
 const INVALID_REFRESH_TOKEN = 'Invalid refresh token';
@@ -26,6 +28,16 @@ const refresh = async (refreshToken: string, context: SessionContext) => {
   // A retired token being replayed means it leaked: end every session
   if (session.revokedAt) {
     await sessionRepository.revokeAllForUser(session.userId);
+    const user = await userRepository.findById(session.userId);
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.AUTH_REFRESH_REUSED,
+      actorId: session.userId,
+      actorEmail: user?.email ?? null,
+      targetType: 'Session',
+      targetId: session.id,
+      ip: context.ip,
+      userAgent: context.userAgent,
+    });
     throw new UnauthorizedError(INVALID_REFRESH_TOKEN);
   }
 
@@ -50,6 +62,15 @@ const refresh = async (refreshToken: string, context: SessionContext) => {
   });
 
   if (!rotated) {
+    await recordAuditEvent({
+      action: AUDIT_ACTIONS.AUTH_REFRESH_REUSED,
+      actorId: user.id,
+      actorEmail: user.email,
+      targetType: 'Session',
+      targetId: session.id,
+      ip: context.ip,
+      userAgent: context.userAgent,
+    });
     throw new UnauthorizedError(INVALID_REFRESH_TOKEN);
   }
 

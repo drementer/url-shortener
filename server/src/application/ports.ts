@@ -17,6 +17,9 @@ import type {
   Session,
   NewSession,
   NewClick,
+  AuditLog,
+  NewAuditLog,
+  AuditLogFilter,
   Page,
   Paged,
 } from '../domain/types';
@@ -80,6 +83,12 @@ type ClickRepository = {
   create(click: NewClick): Promise<unknown>;
 };
 
+/** Append-only audit trail: updates and deletes do not exist on the port */
+type AuditLogRepository = {
+  create(entry: NewAuditLog): Promise<AuditLog>;
+  findAll(filter: AuditLogFilter, page: Page): Promise<Paged<AuditLog>>;
+};
+
 export type {
   UrlQuotaOptions,
   UrlRepository,
@@ -87,4 +96,5 @@ export type {
   RoleRepository,
   SessionRepository,
   ClickRepository,
+  AuditLogRepository,
 };
